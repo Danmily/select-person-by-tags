@@ -1,0 +1,1806 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>圈人工作台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --paper:#F3F4F9; --surface:#FFFFFF; --surface-2:#EAEBF3; --surface-3:#E1E2EE;
+  --ink:#1C1D2E; --ink-2:#4B4C68; --ink-3:#84859E;
+  --rule:#DBDCE7; --rule-soft:#E9E9F2;
+  --agent:#5136D9; --agent-soft:#EBE6FB;
+  --gov:#93610C; --gov-soft:#F6E9D2;
+  --risk:#AE3430; --risk-soft:#F8E2E0;
+  --ok:#1D6B4F; --ok-soft:#DDF0E7;
+  --shadow:0 1px 2px rgba(28,29,46,.05), 0 8px 22px -16px rgba(28,29,46,.3);
+  --fd:"Manrope","Noto Sans SC",system-ui,sans-serif;
+  --fb:"Noto Sans SC",system-ui,-apple-system,sans-serif;
+  --fm:"JetBrains Mono","Noto Sans SC",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#131320; --surface:#1B1C2C; --surface-2:#232437; --surface-3:#2B2C42;
+  --ink:#E7E7F2; --ink-2:#ABACC4; --ink-3:#797A96;
+  --rule:#31324A; --rule-soft:#26273B;
+  --agent:#9B87F5; --agent-soft:#2A2350;
+  --gov:#E0AC55; --gov-soft:#3A2E14;
+  --risk:#E6928D; --risk-soft:#3B2019;
+  --ok:#5CBF95; --ok-soft:#14311F;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px -16px rgba(0,0,0,.85);}}
+:root[data-theme="dark"]{
+  --paper:#131320; --surface:#1B1C2C; --surface-2:#232437; --surface-3:#2B2C42;
+  --ink:#E7E7F2; --ink-2:#ABACC4; --ink-3:#797A96;
+  --rule:#31324A; --rule-soft:#26273B;
+  --agent:#9B87F5; --agent-soft:#2A2350;
+  --gov:#E0AC55; --gov-soft:#3A2E14;
+  --risk:#E6928D; --risk-soft:#3B2019;
+  --ok:#5CBF95; --ok-soft:#14311F;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px -16px rgba(0,0,0,.85);}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--fb);
+  font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+input,select{font-family:inherit;font-size:inherit;color:inherit;}
+.mono{font-family:var(--fm);font-variant-numeric:tabular-nums;}
+:focus-visible{outline:2px solid var(--agent);outline-offset:2px;}
+
+/* ---------- app frame ---------- */
+.app{max-width:1500px;margin:0 auto;padding:0 clamp(.5rem,1.6vw,1rem) 2rem;}
+.topbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem .9rem;
+  padding:.75rem .25rem .8rem;border-bottom:1px solid var(--rule);margin-bottom:.85rem;}
+.brand{display:flex;align-items:baseline;gap:.55rem;}
+.brand h1{margin:0;font-family:var(--fd);font-size:1.12rem;font-weight:800;letter-spacing:-.01em;}
+.brand .sub{font-family:var(--fm);font-size:.66rem;color:var(--ink-3);letter-spacing:.06em;}
+.spacer{flex:1 1 auto;}
+.ctl{display:flex;align-items:center;gap:.4rem;}
+.ctl label{font-family:var(--fm);font-size:.63rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600;}
+select.role{background:var(--surface);border:1px solid var(--rule);border-radius:4px;
+  padding:.32rem .5rem;font-size:.78rem;font-weight:600;}
+.tbtn{background:var(--surface);border:1px solid var(--rule);border-radius:4px;
+  padding:.33rem .62rem;font-size:.76rem;color:var(--ink-2);font-weight:600;}
+.tbtn:hover{background:var(--surface-2);color:var(--ink);}
+
+.banner{background:var(--agent-soft);border:1px solid var(--agent);border-radius:5px;
+  padding:.6rem .8rem;margin-bottom:.85rem;font-size:.78rem;color:var(--ink-2);line-height:1.6;}
+.banner b{color:var(--ink);}
+.banner .bl{font-family:var(--fm);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--agent);font-weight:700;display:block;margin-bottom:.15rem;}
+
+/* ---------- 3 columns ---------- */
+.cols{display:grid;grid-template-columns:minmax(0,1fr);gap:.7rem;align-items:start;}
+@media(min-width:1080px){.cols{grid-template-columns:minmax(0,.82fr) minmax(0,1.4fr) minmax(0,.78fr);}}
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:6px;
+  box-shadow:var(--shadow);display:flex;flex-direction:column;min-width:0;}
+.ptitle{font-family:var(--fm);font-size:.6rem;letter-spacing:.11em;text-transform:uppercase;
+  font-weight:700;color:var(--ink-3);padding:.6rem .8rem .5rem;border-bottom:1px solid var(--rule-soft);
+  display:flex;justify-content:space-between;align-items:center;gap:.4rem;}
+.pbody{padding:.7rem .8rem .85rem;display:flex;flex-direction:column;gap:.55rem;min-width:0;}
+
+/* ---------- chat ---------- */
+.chat{display:flex;flex-direction:column;gap:.45rem;max-height:min(52vh,440px);overflow-y:auto;}
+.msg{border-radius:5px;padding:.5rem .65rem;font-size:.79rem;line-height:1.6;}
+.msg.u{background:var(--surface-3);color:var(--ink);align-self:flex-end;max-width:94%;}
+.msg.a{background:var(--agent-soft);border-left:2px solid var(--agent);color:var(--ink-2);}
+.msg .who{font-family:var(--fm);font-size:.56rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:700;display:block;margin-bottom:.15rem;}
+.msg b{color:var(--ink);}
+.msg.thinking{color:var(--ink-3);font-style:italic;}
+.chips{display:flex;flex-wrap:wrap;gap:.3rem;}
+.chip{background:var(--surface-2);border:1px solid var(--rule);border-radius:20px;
+  padding:.28rem .6rem;font-size:.72rem;color:var(--ink-2);text-align:left;line-height:1.4;}
+.chip:hover{background:var(--agent-soft);border-color:var(--agent);color:var(--ink);}
+.inputrow{display:flex;gap:.35rem;}
+.inputrow input{flex:1;background:var(--surface-2);border:1px solid var(--rule);border-radius:4px;
+  padding:.42rem .55rem;font-size:.78rem;min-width:0;}
+.inputrow input::placeholder{color:var(--ink-3);}
+.hint{font-size:.68rem;color:var(--ink-3);line-height:1.5;}
+
+/* ---------- canvas ---------- */
+.grp{border:1px solid var(--rule);border-radius:5px;overflow:hidden;}
+.grp .gh{display:flex;justify-content:space-between;align-items:center;gap:.4rem;
+  padding:.38rem .6rem;background:var(--surface-2);border-bottom:1px solid var(--rule-soft);}
+.grp .gh .gn{font-family:var(--fm);font-size:.6rem;letter-spacing:.08em;font-weight:700;color:var(--ink-3);}
+.grp .gh .gc{font-family:var(--fm);font-size:.68rem;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;}
+.grp.ex{border-color:var(--risk);}
+.grp.ex .gh{background:var(--risk-soft);}
+.grp.ex .gh .gn,.grp.ex .gh .gc{color:var(--risk);}
+
+.cond{display:flex;align-items:flex-start;gap:.5rem;padding:.48rem .6rem;
+  border-bottom:1px solid var(--rule-soft);}
+.cond:last-child{border-bottom:none;}
+.cond.pending{background:var(--gov-soft);}
+.cond.denied{background:var(--risk-soft);}
+.cmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:.18rem;}
+.crow1{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;}
+.ctype{font-family:var(--fm);font-size:.54rem;font-weight:700;padding:.09rem .3rem;
+  border-radius:2px;letter-spacing:.04em;flex:none;}
+.ctype.enum{background:var(--ok-soft);color:var(--ok);}
+.ctype.interest{background:var(--agent-soft);color:var(--agent);}
+.ctype.behavior{background:var(--gov-soft);color:var(--gov);}
+.clv{font-family:var(--fm);font-size:.53rem;font-weight:700;padding:.08rem .26rem;border-radius:2px;
+  border:1px solid var(--rule);color:var(--ink-3);flex:none;}
+.clv.hi{border-color:var(--gov);color:var(--gov);}
+.ctext{font-size:.78rem;color:var(--ink);line-height:1.45;}
+.cnote{font-size:.68rem;color:var(--ink-2);line-height:1.45;}
+.cnote.warn{color:var(--gov);font-weight:600;}
+.cnote.bad{color:var(--risk);font-weight:600;}
+.cright{display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;flex:none;}
+.cnum{font-family:var(--fm);font-size:.68rem;color:var(--ink-3);font-variant-numeric:tabular-nums;}
+.cacts{display:flex;gap:.25rem;}
+.mini{font-family:var(--fm);font-size:.58rem;font-weight:700;letter-spacing:.03em;
+  padding:.16rem .38rem;border-radius:3px;border:1px solid var(--rule);color:var(--ink-3);}
+.mini:hover{border-color:var(--agent);color:var(--agent);}
+.mini.cta{border-color:var(--gov);color:var(--gov);background:var(--gov-soft);}
+.mini.cta:hover{background:var(--gov);color:var(--surface);}
+.joiner{text-align:center;font-family:var(--fm);font-size:.62rem;font-weight:700;
+  color:var(--agent);letter-spacing:.14em;padding:.1rem 0;}
+.addrow{display:flex;gap:.35rem;flex-wrap:wrap;}
+.addbtn{background:var(--surface-2);border:1px dashed var(--rule);border-radius:4px;
+  padding:.34rem .6rem;font-size:.72rem;color:var(--ink-2);font-weight:600;}
+.addbtn:hover{border-color:var(--agent);color:var(--agent);background:var(--agent-soft);}
+.empty{padding:1.4rem .8rem;text-align:center;color:var(--ink-3);font-size:.78rem;line-height:1.7;
+  border:1px dashed var(--rule);border-radius:5px;}
+
+/* ---------- preview ---------- */
+.kpi{background:var(--surface-2);border-radius:5px;padding:.6rem .7rem;}
+.kpi .kl{font-family:var(--fm);font-size:.56rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:700;}
+.kpi .kv{font-family:var(--fm);font-size:1.55rem;font-weight:700;color:var(--ink);
+  font-variant-numeric:tabular-nums;line-height:1.15;margin-top:.05rem;}
+.kpi .kd{font-size:.68rem;color:var(--ink-2);margin-top:.15rem;line-height:1.5;}
+.kpi.warn{background:var(--gov-soft);}
+.kpi.warn .kl{color:var(--gov);}
+.kpi.bad{background:var(--risk-soft);}
+.kpi.bad .kl{color:var(--risk);}
+.delta{font-family:var(--fm);font-size:.66rem;font-weight:700;}
+.delta.up{color:var(--ok);} .delta.dn{color:var(--risk);}
+.sect{font-family:var(--fm);font-size:.56rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:700;margin-bottom:.3rem;}
+.bars{display:flex;flex-direction:column;gap:.28rem;}
+.barrow{display:grid;grid-template-columns:60px 1fr 30px;align-items:center;gap:.35rem;font-size:.7rem;color:var(--ink-2);}
+.bwrap{height:5px;border-radius:3px;background:var(--surface-3);overflow:hidden;}
+.bfill{height:100%;background:var(--agent);border-radius:3px;transition:width .35s;}
+.bn{font-family:var(--fm);font-size:.6rem;color:var(--ink-3);text-align:right;font-variant-numeric:tabular-nums;}
+.bigbtn{width:100%;background:var(--agent);color:#fff;border-radius:5px;padding:.55rem;
+  font-family:var(--fd);font-weight:700;font-size:.85rem;letter-spacing:.01em;}
+.bigbtn:hover{filter:brightness(1.08);}
+.bigbtn:disabled{background:var(--surface-3);color:var(--ink-3);cursor:not-allowed;filter:none;}
+:root[data-theme="dark"] .bigbtn{color:#131320;}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bigbtn{color:#131320;}}
+.ghostbtn{width:100%;background:transparent;border:1px solid var(--rule);color:var(--ink-2);
+  border-radius:5px;padding:.45rem;font-size:.78rem;font-weight:600;}
+.ghostbtn:hover{border-color:var(--agent);color:var(--agent);}
+.blockmsg{font-size:.7rem;color:var(--gov);line-height:1.5;font-weight:600;text-align:center;}
+
+/* ---------- modal ---------- */
+.mask{position:fixed;inset:0;background:rgba(16,17,30,.55);display:grid;place-items:center;
+  padding:1rem;z-index:50;}
+.mask[hidden]{display:none!important;}
+.modal{background:var(--surface);border:1px solid var(--rule);border-radius:8px;
+  box-shadow:0 24px 60px -20px rgba(0,0,0,.5);width:min(760px,100%);max-height:88vh;
+  display:flex;flex-direction:column;overflow:hidden;}
+.mhead{padding:.8rem 1rem .7rem;border-bottom:1px solid var(--rule);display:flex;
+  justify-content:space-between;align-items:baseline;gap:.6rem;}
+.mhead h2{margin:0;font-family:var(--fd);font-size:1rem;font-weight:800;}
+.mhead .ms{font-size:.72rem;color:var(--ink-3);}
+.mbody{padding:.85rem 1rem;overflow-y:auto;display:flex;flex-direction:column;gap:.7rem;}
+.mfoot{padding:.7rem 1rem;border-top:1px solid var(--rule);display:flex;gap:.5rem;
+  justify-content:flex-end;align-items:center;background:var(--surface-2);flex-wrap:wrap;}
+.mfoot .fnote{margin-right:auto;font-size:.7rem;color:var(--ink-3);}
+.btn{border-radius:5px;padding:.42rem .85rem;font-weight:700;font-size:.8rem;}
+.btn.pri{background:var(--agent);color:#fff;}
+:root[data-theme="dark"] .btn.pri{color:#131320;}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.pri{color:#131320;}}
+.btn.pri:disabled{background:var(--surface-3);color:var(--ink-3);cursor:not-allowed;}
+.btn.sec{border:1px solid var(--rule);color:var(--ink-2);}
+.btn.sec:hover{border-color:var(--agent);color:var(--agent);}
+
+.tabs{display:flex;gap:.3rem;border-bottom:1px solid var(--rule);padding-bottom:.5rem;flex-wrap:wrap;}
+.tab{padding:.32rem .6rem;border-radius:4px;font-size:.76rem;font-weight:600;color:var(--ink-3);
+  border:1px solid transparent;}
+.tab:hover{color:var(--ink);}
+.tab.on{background:var(--agent-soft);color:var(--agent);border-color:var(--agent);}
+.tabnote{font-size:.7rem;color:var(--ink-2);line-height:1.55;background:var(--surface-2);
+  border-radius:4px;padding:.5rem .6rem;}
+.tabnote b{color:var(--ink);}
+
+.srch{width:100%;background:var(--surface-2);border:1px solid var(--rule);border-radius:4px;
+  padding:.45rem .6rem;font-size:.82rem;}
+.optlist{display:flex;flex-direction:column;gap:.3rem;max-height:300px;overflow-y:auto;}
+.opt{display:flex;align-items:flex-start;gap:.55rem;border:1px solid var(--rule);border-radius:5px;
+  padding:.5rem .6rem;background:var(--surface);text-align:left;width:100%;}
+.opt:hover{border-color:var(--agent);background:var(--agent-soft);}
+.opt.on{border-color:var(--agent);background:var(--agent-soft);}
+.opt.locked{opacity:.55;cursor:not-allowed;}
+.opt.locked:hover{border-color:var(--rule);background:var(--surface);}
+.opt .ck{width:15px;height:15px;border:1.5px solid var(--rule);border-radius:3px;flex:none;margin-top:.15rem;
+  display:grid;place-items:center;font-size:.6rem;color:#fff;}
+.opt.on .ck{background:var(--agent);border-color:var(--agent);}
+:root[data-theme="dark"] .opt.on .ck{color:#131320;}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .opt.on .ck{color:#131320;}}
+.opt .ob{flex:1;min-width:0;}
+.opt .on1{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;}
+.opt .onm{font-size:.82rem;font-weight:600;color:var(--ink);}
+.opt .od{font-size:.68rem;color:var(--ink-2);margin-top:.15rem;line-height:1.5;}
+.opt .om{font-family:var(--fm);font-size:.62rem;color:var(--ink-3);margin-top:.2rem;
+  display:flex;gap:.6rem;flex-wrap:wrap;}
+.opt .cnt{font-family:var(--fm);font-size:.72rem;font-weight:700;color:var(--ink-2);flex:none;
+  font-variant-numeric:tabular-nums;}
+.valbar{height:4px;border-radius:2px;background:var(--surface-3);margin-top:.25rem;overflow:hidden;}
+.valbar i{display:block;height:100%;background:var(--ok);border-radius:2px;}
+
+.builder{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;background:var(--surface-2);
+  border-radius:5px;padding:.6rem .7rem;}
+.builder select,.builder input{background:var(--surface);border:1px solid var(--rule);
+  border-radius:4px;padding:.32rem .45rem;font-size:.78rem;}
+.builder .lbl{font-size:.75rem;color:var(--ink-2);}
+.tplrow{display:flex;flex-wrap:wrap;gap:.3rem;}
+
+.recap{background:var(--surface-2);border-left:3px solid var(--agent);border-radius:0 5px 5px 0;
+  padding:.7rem .85rem;font-size:.85rem;line-height:1.75;color:var(--ink);}
+.recap .rl{font-family:var(--fm);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--agent);font-weight:700;margin-bottom:.25rem;}
+.recap em{font-style:normal;color:var(--agent);font-weight:700;}
+.warnbox{background:var(--gov-soft);border-left:3px solid var(--gov);border-radius:0 5px 5px 0;
+  padding:.6rem .8rem;font-size:.74rem;color:var(--ink-2);line-height:1.6;}
+.warnbox b{color:var(--ink);}
+.warnbox .wl{font-family:var(--fm);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--gov);font-weight:700;margin-bottom:.2rem;}
+
+/* result */
+.rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.5rem;}
+.rcard{background:var(--surface-2);border-radius:5px;padding:.6rem .7rem;}
+.rcard .rl{font-family:var(--fm);font-size:.56rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:700;}
+.rcard .rv{font-family:var(--fm);font-size:1.15rem;font-weight:700;color:var(--ink);margin-top:.05rem;
+  font-variant-numeric:tabular-nums;}
+.rcard .rd{font-size:.66rem;color:var(--ink-2);margin-top:.1rem;line-height:1.45;}
+.dispatch{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.4rem;}
+.dbtn{border:1px solid var(--rule);border-radius:5px;padding:.55rem .65rem;text-align:left;background:var(--surface);}
+.dbtn:hover{border-color:var(--agent);background:var(--agent-soft);}
+.dbtn.on{border-color:var(--agent);background:var(--agent-soft);}
+.dbtn .dn{font-size:.8rem;font-weight:700;color:var(--ink);}
+.dbtn .dd{font-size:.66rem;color:var(--ink-2);margin-top:.12rem;line-height:1.45;}
+.saveopt{display:flex;gap:.4rem;flex-wrap:wrap;}
+.sopt{border:1px solid var(--rule);border-radius:5px;padding:.5rem .6rem;flex:1 1 180px;text-align:left;background:var(--surface);}
+.sopt:hover{border-color:var(--agent);}
+.sopt.on{border-color:var(--agent);background:var(--agent-soft);}
+.sopt .sn{font-size:.78rem;font-weight:700;color:var(--ink);}
+.sopt .sd{font-size:.66rem;color:var(--ink-2);margin-top:.1rem;line-height:1.45;}
+.contract{background:var(--ok-soft);border-left:3px solid var(--ok);border-radius:0 5px 5px 0;
+  padding:.6rem .8rem;font-size:.74rem;color:var(--ink-2);line-height:1.6;}
+.contract .cl2{font-family:var(--fm);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ok);font-weight:700;margin-bottom:.2rem;}
+.contract b{color:var(--ink);}
+code{font-family:var(--fm);font-size:.92em;background:var(--surface-2);padding:.05rem .28rem;border-radius:2px;}
+
+/* ---------- view tabs ---------- */
+.vtabs{display:flex;gap:.3rem;margin-bottom:.85rem;flex-wrap:wrap;}
+.vtab{padding:.4rem .85rem;border-radius:5px;font-size:.82rem;font-weight:700;color:var(--ink-3);
+  border:1px solid transparent;font-family:var(--fd);}
+.vtab:hover{color:var(--ink);}
+.vtab.on{background:var(--surface);color:var(--agent);border-color:var(--rule);box-shadow:var(--shadow);}
+.vtab .cnt2{font-family:var(--fm);font-size:.62rem;background:var(--agent);color:#fff;
+  border-radius:9px;padding:.03rem .32rem;margin-left:.3rem;}
+:root[data-theme="dark"] .vtab .cnt2{color:#131320;}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .vtab .cnt2{color:#131320;}}
+.vtab .cnt2.alert{background:var(--risk);}
+
+/* ---------- assets ---------- */
+.assets{display:grid;grid-template-columns:minmax(0,1fr);gap:.7rem;align-items:start;}
+@media(min-width:1000px){.assets{grid-template-columns:minmax(0,.6fr) minmax(0,1fr);}}
+.filters{display:flex;gap:.25rem;flex-wrap:wrap;margin-bottom:.5rem;}
+.fbtn{border:1px solid var(--rule);border-radius:20px;padding:.2rem .6rem;font-size:.72rem;
+  color:var(--ink-3);font-weight:600;}
+.fbtn.on{background:var(--agent-soft);border-color:var(--agent);color:var(--agent);}
+.alist{display:flex;flex-direction:column;gap:.4rem;}
+.arow{border:1px solid var(--rule);border-radius:5px;padding:.55rem .7rem;background:var(--surface);
+  text-align:left;width:100%;display:flex;flex-direction:column;gap:.25rem;}
+.arow:hover{border-color:var(--agent);}
+.arow.on{border-color:var(--agent);background:var(--agent-soft);}
+.arow .a1{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;}
+.arow .anm{font-size:.8rem;font-weight:700;color:var(--ink);flex:1 1 auto;min-width:0;line-height:1.4;}
+.kind{font-family:var(--fm);font-size:.54rem;font-weight:700;padding:.09rem .32rem;border-radius:2px;flex:none;}
+.kind.rule{background:var(--surface-3);color:var(--ink-2);}
+.kind.snap{background:var(--ok-soft);color:var(--ok);}
+.kind.sub{background:var(--agent-soft);color:var(--agent);}
+.st{font-family:var(--fm);font-size:.55rem;font-weight:700;padding:.09rem .32rem;border-radius:2px;flex:none;}
+.st.ok{background:var(--ok-soft);color:var(--ok);}
+.st.warn{background:var(--gov-soft);color:var(--gov);}
+.st.bad{background:var(--risk-soft);color:var(--risk);}
+.arow .a2{display:flex;gap:.65rem;font-family:var(--fm);font-size:.62rem;color:var(--ink-3);flex-wrap:wrap;}
+
+.det{display:flex;flex-direction:column;gap:.65rem;}
+.dsec{border-top:1px solid var(--rule-soft);padding-top:.6rem;}
+.dsec.first{border-top:none;padding-top:0;}
+.fieldrow{display:grid;grid-template-columns:minmax(0,1fr);gap:.45rem;}
+@media(min-width:620px){.fieldrow{grid-template-columns:repeat(2,minmax(0,1fr));}}
+.field label{font-family:var(--fm);font-size:.55rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:700;display:block;margin-bottom:.15rem;}
+.field input,.field select,.field textarea{width:100%;background:var(--surface-2);
+  border:1px solid var(--rule);border-radius:4px;padding:.35rem .5rem;font-size:.78rem;}
+.field textarea{resize:vertical;min-height:46px;font-family:inherit;line-height:1.5;}
+.bizchips{display:flex;gap:.25rem;flex-wrap:wrap;}
+.bchip{border:1px solid var(--rule);border-radius:20px;padding:.16rem .55rem;font-size:.68rem;color:var(--ink-3);}
+.bchip.on{background:var(--agent-soft);border-color:var(--agent);color:var(--agent);font-weight:600;}
+.issue{border-left:3px solid var(--gov);background:var(--gov-soft);border-radius:0 4px 4px 0;
+  padding:.5rem .68rem;font-size:.73rem;line-height:1.6;color:var(--ink-2);}
+.issue.bad{border-left-color:var(--risk);background:var(--risk-soft);}
+.issue .il{font-family:var(--fm);font-size:.55rem;letter-spacing:.08em;text-transform:uppercase;
+  font-weight:700;color:var(--gov);margin-bottom:.15rem;}
+.issue.bad .il{color:var(--risk);}
+.issue b{color:var(--ink);}
+.issue .ifix{margin-top:.35rem;}
+.vlist{display:flex;flex-direction:column;gap:.3rem;}
+.vrow{display:flex;align-items:center;gap:.5rem;padding:.4rem .55rem;border:1px solid var(--rule);
+  border-radius:4px;font-size:.72rem;flex-wrap:wrap;}
+.vrow.cur{border-color:var(--agent);background:var(--agent-soft);}
+.vrow .vv{font-family:var(--fm);font-weight:700;color:var(--ink);flex:none;}
+.vrow .vn{flex:1 1 auto;min-width:0;color:var(--ink-2);}
+.vrow .vr{font-family:var(--fm);color:var(--ink-3);flex:none;}
+.refrow{border:1px solid var(--rule);border-radius:4px;padding:.5rem .62rem;font-size:.72rem;
+  display:flex;flex-direction:column;gap:.18rem;}
+.refrow .rn2{font-weight:700;color:var(--ink);font-size:.78rem;}
+.refrow .rm{font-family:var(--fm);font-size:.62rem;color:var(--ink-3);}
+.refrow .re{font-family:var(--fm);font-size:.68rem;color:var(--ok);font-weight:600;}
+.refrow .re.none{color:var(--risk);}
+.actbar{display:flex;gap:.35rem;flex-wrap:wrap;}
+.condlist{display:flex;flex-direction:column;gap:.25rem;}
+.condro{font-size:.72rem;color:var(--ink-2);background:var(--surface-2);border-radius:3px;
+  padding:.3rem .5rem;font-family:var(--fm);line-height:1.5;}
+.condro.ex2{color:var(--risk);}
+.hpill{display:inline-flex;align-items:center;gap:.3rem;font-family:var(--fm);font-size:.62rem;
+  font-weight:700;padding:.16rem .45rem;border-radius:3px;}
+.hpill.ok{background:var(--ok-soft);color:var(--ok);}
+.hpill.warn{background:var(--gov-soft);color:var(--gov);}
+.hpill.bad{background:var(--risk-soft);color:var(--risk);}
+.hgrid{display:flex;gap:.3rem;flex-wrap:wrap;}
+.diff{display:flex;flex-direction:column;gap:.25rem;font-family:var(--fm);font-size:.72rem;}
+.diff .dl{padding:.3rem .5rem;border-radius:3px;}
+.diff .dl.add{background:var(--ok-soft);color:var(--ok);}
+.diff .dl.rem{background:var(--risk-soft);color:var(--risk);}
+.diff .dl.same{background:var(--surface-2);color:var(--ink-3);}
+.toast{position:fixed;left:50%;bottom:1.4rem;transform:translateX(-50%);z-index:80;
+  background:var(--ink);color:var(--paper);border-radius:6px;padding:.55rem .95rem;
+  font-size:.79rem;line-height:1.55;box-shadow:0 12px 32px -12px rgba(0,0,0,.55);
+  max-width:min(600px,92vw);}
+.toast[hidden]{display:none!important;}
+.toast b{font-weight:700;}
+
+footer{margin-top:1.4rem;padding-top:.85rem;border-top:1px solid var(--rule);
+  font-family:var(--fm);font-size:.68rem;color:var(--ink-3);line-height:1.8;}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+
+</head>
+<body>
+<div class="app">
+
+<div class="topbar">
+  <div class="brand"><h1>圈人工作台</h1><span class="sub">DEMO · 交互原型</span></div>
+  <div class="spacer"></div>
+  <div class="ctl">
+    <label for="role">当前角色</label>
+    <select class="role" id="role">
+      <option value="ops">产运 · L1–L3 可见</option>
+      <option value="algo">算法 · L1–L3 可见</option>
+      <option value="analyst">分析师 · L1–L2 脱敏</option>
+    </select>
+  </div>
+  <button class="tbtn" id="reset">重置</button>
+</div>
+
+<div style="background:var(--risk-soft);border:1px solid var(--risk);border-radius:5px;padding:.55rem .8rem;margin-bottom:.7rem;font-size:.78rem;color:var(--ink-2);line-height:1.6"><b style="color:var(--risk)">设计原型 · 数据均为虚构</b>　本页用于演示交互形态。所有标签、口径、人群与数值均为示例，不代表任何真实业务数据或线上系统。</div>
+<div class="banner" id="banner"></div>
+
+<div class="vtabs" id="vtabs"></div>
+
+<div class="cols" id="viewBuild">
+
+  <!-- ============ 对话 ============ -->
+  <div class="panel">
+    <div class="ptitle"><span>对话区</span><span id="chatns" class="mono" style="font-weight:400"></span></div>
+    <div class="pbody">
+      <div class="chat" id="chat"></div>
+      <div class="chips" id="chips"></div>
+      <div class="inputrow">
+        <input id="qin" placeholder="用一句话描述你要的人群…" autocomplete="off">
+        <button class="tbtn" id="qsend">发送</button>
+      </div>
+      <div class="hint">试试："喜欢露营的人"、"一二线城市"、"近30天曝光没下单"、"火锅"、"异地出行"</div>
+    </div>
+  </div>
+
+  <!-- ============ 画布 ============ -->
+  <div class="panel">
+    <div class="ptitle"><span>条件画布</span><span style="font-weight:400;text-transform:none;letter-spacing:0">组内 AND · 组间 OR · 排除区独立</span></div>
+    <div class="pbody" id="canvas"></div>
+  </div>
+
+  <!-- ============ 预览 ============ -->
+  <div class="panel">
+    <div class="ptitle"><span>实时预览</span><span style="font-weight:400;text-transform:none;letter-spacing:0">秒级预估 ±5%</span></div>
+    <div class="pbody" id="preview"></div>
+  </div>
+
+</div>
+
+<div class="assets" id="viewAssets" hidden>
+  <div class="panel">
+    <div class="ptitle"><span>我的人群</span><span id="acount" class="mono" style="font-weight:400"></span></div>
+    <div class="pbody">
+      <div class="filters" id="afilters"></div>
+      <div class="alist" id="alist"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="ptitle"><span>详情与自定义</span><span style="font-weight:400;text-transform:none;letter-spacing:0">规则 · 版本 · 血缘 · 健康度</span></div>
+    <div class="pbody" id="adetail"></div>
+  </div>
+</div>
+
+<footer>
+  圈人 Agent 交互原型 · 配套《圈人智能体》PRD v0.3 第 01/02/03/08 节。<br>
+  所有数字为模拟计算，标签、口径与人群均为虚构示例，非真实业务数据。
+</footer>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<!-- ============ modal ============ -->
+<div class="mask" id="mask" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="mhead"><h2 id="mtitle"></h2><span class="ms" id="msub"></span></div>
+    <div class="mbody" id="mbody"></div>
+    <div class="mfoot" id="mfoot"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ 数据 ============ */
+var TOTAL = 580000000;
+
+var ENUMS = [
+  { id:'trade.local.consume_level', name:'生服消费等级', ns:'local', lv:'L2',
+    desc:'基于近 180 天生服交易频次与金额的分层，1 最低 5 最高',
+    caveat:'口径待确认：是否包含履约维度',
+    vals:[['1',186000000],['2',142000000],['3',98000000],['4',21400000],['5',9800000]] },
+  { id:'trade.ecom.consume_level', name:'电商消费等级', ns:'ecom', lv:'L2',
+    desc:'基于近 180 天电商 GMV 与客单价的分层，L1 最低 L5 最高',
+    vals:[['L1',52000000],['L2',37100000],['L3',28000000],['L4',11000000],['L5',4200000]] },
+  { id:'trade.common.city_tier', name:'城市等级', ns:'common', lv:'L1',
+    desc:'常驻城市分级，取近 90 天主要活跃地',
+    vals:[['一线',68000000],['新一线',96000000],['二线',124000000],['三线及以下',292000000]] },
+  { id:'trade.local.gmv_pct', name:'生服 GMV 分位', ns:'local', lv:'L3',
+    desc:'生服有交易用户内部的 GMV 分位（分母为生服交易用户，非大盘）',
+    vals:[['P0–P50',89000000],['P50–P80',53000000],['P80–P95',19800000],['P95+',6700000]] },
+  { id:'trade.common.age', name:'年龄段', ns:'common', lv:'L1',
+    desc:'推断年龄段',
+    vals:[['18–25',112000000],['26–35',198000000],['36–45',154000000],['46+',116000000]] }
+];
+
+var INTERESTS = [
+  { id:'interest.outdoor.camping', name:'户外露营', reach:12400000, lv:'L2', ns:'ecom',
+    src:'电商行为 + LLM 推理', freq:'日更', acc:null, kw:['露营','户外','帐篷','野营'],
+    desc:'近 90 天有露营相关商品浏览 / 购买，或露营内容消费行为' },
+  { id:'interest.outdoor.general', name:'户外运动', reach:38900000, lv:'L1', ns:'ecom',
+    src:'电商行为', freq:'日更', acc:null, kw:['露营','户外','运动','徒步','骑行'],
+    desc:'户外运动大类兴趣，覆盖露营 / 徒步 / 骑行 / 钓鱼等子类（范围明显更宽）' },
+  { id:'llm.intent.camping_purchase', name:'露营装备购买意图', reach:4200000, lv:'L3', ns:'cross',
+    src:'LLM 推理 · 全域序列', freq:'周更', acc:'抽检准确率 87%', kw:['露营','户外','购买','意图','装备'],
+    desc:'基于全域行为序列由大模型推断的短期购买意图，时效性强但覆盖窄' },
+  { id:'interest.food.hotpot', name:'火锅偏好', reach:28700000, lv:'L2', ns:'local',
+    src:'生服行为', freq:'日更', acc:null, kw:['火锅','餐饮','到店','美食'],
+    desc:'近 90 天火锅品类团购浏览 / 下单 / 核销行为' },
+  { id:'interest.parenting.baking', name:'亲子烘焙', reach:6800000, lv:'L2', ns:'ecom',
+    src:'电商行为 + 内容消费', freq:'日更', acc:null, kw:['亲子','烘焙','母婴','烘培'],
+    desc:'亲子类烘焙器具与课程的兴趣人群' },
+  { id:'llm.intent.travel_nonlocal', name:'异地出行意图', reach:15600000, lv:'L3', ns:'cross',
+    src:'LLM 推理 · 全域序列', freq:'日更', acc:'抽检准确率 85%', kw:['出行','异地','旅游','travel','旅行'],
+    desc:'跨域识别的短期异地出行意图，示例：跨域识别的短期意图标签' },
+  { id:'interest.beauty.skincare', name:'护肤兴趣', reach:51200000, lv:'L1', ns:'ecom',
+    src:'电商行为', freq:'日更', acc:null, kw:['护肤','美妆','面膜','beauty'],
+    desc:'护肤品类兴趣人群' },
+  { id:'llm.summary.shop_intent', name:'进店意图', reach:9400000, lv:'L3', ns:'local',
+    src:'LLM 推理', freq:'日更', acc:'抽检准确率 82%', kw:['进店','到店','门店','意图'],
+    desc:'⚠ 示例：该类标签可能出现主指标正向、护栏指标负向的冲突' }
+];
+
+var EVENTS = [
+  { id:'ecom.impression', name:'电商商品曝光', ns:'ecom', lv:'L2', base:0.215, kw:['曝光','看','浏览'] },
+  { id:'ecom.order',      name:'电商下单',     ns:'ecom', lv:'L2', base:0.0214, kw:['下单','购买','买'] },
+  { id:'ecom.cart',       name:'电商加购',     ns:'ecom', lv:'L2', base:0.061, kw:['加购','购物车'] },
+  { id:'local.verify',    name:'生服到店核销', ns:'local',lv:'L2', base:0.048, kw:['核销','到店','团购'] },
+  { id:'ad.click',        name:'广告点击',     ns:'ad',   lv:'L3', base:0.128, kw:['广告','点击'] },
+  { id:'coupon.receive',  name:'领券',         ns:'ecom', lv:'L2', base:0.094, kw:['领券','优惠券','券'] }
+];
+var WINDOWS = [[7,0.45],[14,0.68],[30,1],[90,1.7]];
+var THRESH  = [[1,1],[3,0.42],[5,0.24],[10,0.11]];
+var MODS = [ ['none','—',1], ['no_order','但未下单',0.85], ['no_pay','但未支付',0.78] ];
+
+var TPL = [
+  { n:'曝光未转化', ev:'ecom.impression', w:30, t:3, mod:'no_order' },
+  { n:'加购未支付', ev:'ecom.cart',       w:14, t:1, mod:'no_pay'  },
+  { n:'近90天无下单', ev:'ecom.order',    w:90, t:1, mod:'none', neg:true },
+  { n:'领券未核销', ev:'coupon.receive',  w:30, t:1, mod:'no_pay' }
+];
+
+var PROFILES = {
+  'trade.local.consume_level':{ '一二线':142,'26–35岁':118,'到店餐饮':186,'母婴品类':92 },
+  'trade.ecom.consume_level': { '一二线':88, '26–35岁':104,'到店餐饮':96, '母婴品类':108 },
+  'trade.common.city_tier':   { '一二线':240,'26–35岁':126,'到店餐饮':148,'母婴品类':86 },
+  'trade.local.gmv_pct':      { '一二线':168,'26–35岁':132,'到店餐饮':212,'母婴品类':78 },
+  'trade.common.age':         { '一二线':112,'26–35岁':180,'到店餐饮':118,'母婴品类':140 },
+  'interest.outdoor.camping': { '一二线':156,'26–35岁':164,'到店餐饮':92, '母婴品类':118 },
+  'interest.outdoor.general': { '一二线':128,'26–35岁':142,'到店餐饮':96, '母婴品类':104 },
+  'llm.intent.camping_purchase':{ '一二线':172,'26–35岁':170,'到店餐饮':88,'母婴品类':122 },
+  'interest.food.hotpot':     { '一二线':164,'26–35岁':138,'到店餐饮':248,'母婴品类':96 },
+  'interest.parenting.baking':{ '一二线':134,'26–35岁':176,'到店餐饮':104,'母婴品类':262 },
+  'llm.intent.travel_nonlocal':{ '一二线':186,'26–35岁':148,'到店餐饮':164,'母婴品类':88 },
+  'interest.beauty.skincare': { '一二线':142,'26–35岁':152,'到店餐饮':112,'母婴品类':118 },
+  'llm.summary.shop_intent':  { '一二线':158,'26–35岁':124,'到店餐饮':226,'母婴品类':94 },
+  'ecom.impression':{ '一二线':102,'26–35岁':108,'到店餐饮':98,'母婴品类':102 },
+  'ecom.order':     { '一二线':118,'26–35岁':122,'到店餐饮':106,'母婴品类':112 },
+  'ecom.cart':      { '一二线':112,'26–35岁':118,'到店餐饮':102,'母婴品类':110 },
+  'local.verify':   { '一二线':172,'26–35岁':126,'到店餐饮':238,'母婴品类':92 },
+  'ad.click':       { '一二线':126,'26–35岁':116,'到店餐饮':118,'母婴品类':98 },
+  'coupon.receive': { '一二线':96, '26–35岁':112,'到店餐饮':124,'母婴品类':116 }
+};
+var DIMS = ['一二线','26–35岁','到店餐饮','母婴品类'];
+
+/* ---- 已有人群资产（演示长期维护） ---- */
+var AUDS = [
+  { id:'aud_10241', name:'生服高潜 × 电商低消 · 差异化承接', kind:'sub',
+    reach:18470000, owner:'我', biz:['电商','生服'], created:'2026-08-12', updated:'2026-09-01',
+    ver:3, freq:'日更', expire:78, alertPct:'20',
+    desc:'会议确认的差异化承接主人群，用于电商货盘价格带匹配。',
+    conds:['生服消费等级 ∈ {4, 5}','电商消费等级 ∈ {L1, L2}'],
+    excl:['近 30 天 电商下单 ≥ 1 次'],
+    versions:[
+      { v:3, date:'09-01', by:'我', note:'新增排除近 30 天已下单用户', reach:18470000 },
+      { v:2, date:'08-24', by:'我', note:'电商消费等级由 {L1} 扩到 {L1, L2}', reach:30110000 },
+      { v:1, date:'08-12', by:'我', note:'初版', reach:21400000 }
+    ],
+    refs:[
+      { n:'国庆货品承接策略', t:'策略平台', eff:'触达 1,240万 · 券核销率 +2.4% · GMV +1,860万' },
+      { n:'高潜召回模型 v3', t:'特征服务', eff:null, days:14 }
+    ],
+    issues:[] },
+
+  { id:'aud_10188', name:'露营装备高意图人群', kind:'sub',
+    reach:4200000, owner:'我', biz:['电商'], created:'2026-08-19', updated:'2026-08-28',
+    ver:1, freq:'周更', expire:52, alertPct:'20',
+    desc:'露营品类新品首发的种子人群。',
+    conds:['露营装备购买意图（L3）','城市等级 ∈ {一线, 新一线}'],
+    excl:[],
+    versions:[ { v:1, date:'08-19', by:'我', note:'初版', reach:4200000 } ],
+    refs:[ { n:'露营新品首发策略', t:'策略平台', eff:'触达 386万 · 转化率 +1.8%' } ],
+    issues:[
+      { lv:'warn', t:'口径漂移', m:'标签 <b>露营装备购买意图</b> 的 Owner 于 08-28 修改了定义（推理窗口由 14 天调整为 7 天）。当前规则仍按旧口径理解，<b>圈出的人可能已经不是你原本要的那批</b>。',
+        fix:'重新确认口径' } ] },
+
+  { id:'aud_10233', name:'异地出行意图 · 用增召回', kind:'sub',
+    reach:9400000, owner:'我', biz:['生服'], created:'2026-08-05', updated:'2026-09-01',
+    ver:2, freq:'日更', expire:34, alertPct:'20',
+    desc:'示例场景：面向流失倾向人群的内容召回。',
+    conds:['异地出行意图（L3）','生服消费等级 ∈ {3, 4, 5}'],
+    excl:['近 7 天 生服到店核销 ≥ 1 次'],
+    versions:[
+      { v:2, date:'08-22', by:'我', note:'加入排除近 7 天已核销', reach:21800000 },
+      { v:1, date:'08-05', by:'我', note:'初版', reach:24600000 }
+    ],
+    refs:[ { n:'用增视频召回', t:'算法 / 特征服务', eff:'AB 正向 · 目标人群人均订单 +1.2%（示例数据）' } ],
+    issues:[
+      { lv:'bad', t:'规模异常告警', m:'09-01 刷新后规模由 <b>2,180万 骤降至 940万（−57%）</b>，超出你设置的 20% 波动阈值。初判为上游「异地出行意图」标签当日产出延迟。',
+        fix:'已自动暂停分发 · 查看详情' } ] },
+
+  { id:'aud_10305', name:'350万消费潜力验证', kind:'snap',
+    reach:3500000, owner:'我', biz:['电商','生服'], created:'2026-08-29', updated:'2026-08-29',
+    ver:1, freq:'—', expire:-2, alertPct:'20',
+    desc:'一次性验证：生服高消费但电商未触达用户的消费潜力，供业务方佐证使用。',
+    conds:['生服 GMV 分位 ≥ P80','近 90 天 电商下单 = 0 次'],
+    excl:[],
+    versions:[ { v:1, date:'08-29', by:'我', note:'一次性快照，不进续期', reach:3500000 } ],
+    refs:[ { n:'消费潜力佐证分析', t:'仅分析', eff:'一次性使用，无需回流' } ],
+    issues:[
+      { lv:'warn', t:'快照已过期', m:'一次性快照有效期 7 天，已于 <b>09-05 过期</b>，下游不可继续消费。<b>这是设计如此</b>——一次性分析不进续期循环，避免占用 Owner 审批带宽。',
+        fix:'按同一规则重新生成' } ] },
+
+  { id:'aud_10412', name:'火锅偏好 × 一二线（未生成）', kind:'rule',
+    reach:0, owner:'我', biz:['生服'], created:'2026-08-30', updated:'2026-08-30',
+    ver:1, freq:'—', expire:90, alertPct:'20',
+    desc:'暑期大促候选人群，规则已定义但尚未生成人群。',
+    conds:['火锅偏好','城市等级 ∈ {一线, 新一线}'],
+    excl:[],
+    versions:[ { v:1, date:'08-30', by:'我', note:'仅保存规则定义', reach:0 } ],
+    refs:[],
+    issues:[] },
+
+  { id:'aud_10077', name:'进店意图高分人群', kind:'sub',
+    reach:6200000, owner:'我', biz:['生服'], created:'2026-07-18', updated:'2026-08-30',
+    ver:2, freq:'日更', expire:5, alertPct:'20',
+    desc:'门店到访提升实验用人群。',
+    conds:['进店意图（L3）','生服消费等级 ∈ {4, 5}'],
+    excl:[],
+    versions:[
+      { v:2, date:'08-11', by:'我', note:'收窄至消费等级 4/5', reach:6200000 },
+      { v:1, date:'07-18', by:'我', note:'初版', reach:9400000 }
+    ],
+    refs:[ { n:'门店到访提升策略', t:'策略平台', eff:null, days:22 } ],
+    issues:[
+      { lv:'bad', t:'引用标签已下线', m:'规则引用的 <b>进店意图</b> 标签已于 08-30 被 Owner 回收下线（示例：主指标正向但护栏指标负向，被判定为不可推全）。<b>该规则已自动失效，无法再刷新。</b>',
+        fix:'查看可替代标签' },
+      { lv:'warn', t:'权限即将到期', m:'L3 标签授权 <b>5 天后到期</b>，受控级续期需 Owner 重新确认用途。',
+        fix:'发起续期' },
+      { lv:'warn', t:'效果未回写', m:'「门店到访提升策略」已分发 <b>22 天未回写效果</b>，计入健康度。<b>用可见的缺失反推下游回流。</b>',
+        fix:'催办回流' } ] }
+];
+
+var ROLE_MAX = { ops:3, algo:3, analyst:2 };
+var ROLE_NAME = { ops:'产运', algo:'算法', analyst:'分析师' };
+function lvNum(lv){ return parseInt(lv.slice(1),10); }
+function canSee(lv){ return lvNum(lv) <= ROLE_MAX[S.role]; }
+
+/* ============ 状态 ============ */
+var S, uid = 0, lastReach = null;
+function nid(){ return 'x' + (++uid); }
+function fresh(){
+  return { role:(S&&S.role)||'ops', groups:[{ id:nid(), conds:[] }], excludes:[], msgs:[], view:'build' };
+}
+S = fresh();
+
+/* ============ 计算 ============ */
+function condRatio(c){ return c.reach / TOTAL; }
+function groupRatio(conds){
+  var act = conds.filter(function(c){ return c.confirmed && canSee(c.lv); });
+  if(!act.length) return 0;
+  var rs = act.map(condRatio).sort(function(a,b){ return a-b; });
+  var r = rs[0];
+  for(var i=1;i<rs.length;i++) r *= Math.pow(rs[i], 0.15);
+  return r;
+}
+function orRatio(list){
+  var p = 1;
+  for(var i=0;i<list.length;i++) p *= (1 - list[i]);
+  return 1 - p;
+}
+function compute(){
+  var gr = S.groups.map(function(g){ return groupRatio(g.conds); });
+  var base = orRatio(gr.filter(function(x){ return x>0; }));
+  var exActive = S.excludes.filter(function(c){ return c.confirmed && canSee(c.lv); });
+  var exR = orRatio(exActive.map(condRatio));
+  var cut = Math.min(0.68, exR * 11);
+  var finalR = base * (1 - cut);
+  return { groupRatios:gr, base:base, cut:cut, ratio:finalR, reach:Math.round(finalR * TOTAL) };
+}
+function allConds(){
+  var a = [];
+  S.groups.forEach(function(g){ a = a.concat(g.conds); });
+  return a.concat(S.excludes);
+}
+function pending(){ return allConds().filter(function(c){ return !c.confirmed; }); }
+function denied(){ return allConds().filter(function(c){ return !canSee(c.lv); }); }
+function crossDomain(){
+  var ns = {};
+  allConds().forEach(function(c){ if(canSee(c.lv)) ns[c.ns] = 1; });
+  if(ns.cross) return true;
+  return !!(ns.local && ns.ecom) || !!(ns.ad && (ns.local||ns.ecom));
+}
+function tgi(){
+  var act = allConds().filter(function(c){ return c.confirmed && canSee(c.lv) && PROFILES[c.src]; });
+  var out = {};
+  DIMS.forEach(function(d){
+    if(!act.length){ out[d] = 100; return; }
+    var s = 0;
+    act.forEach(function(c){ s += (PROFILES[c.src][d] || 100); });
+    out[d] = Math.round(s / act.length);
+  });
+  return out;
+}
+function overlapPct(seed){
+  var h = 0, str = allConds().map(function(c){ return c.src; }).join('|') + seed;
+  for(var i=0;i<str.length;i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
+  return 4 + (h % 46);
+}
+function fmt(n){
+  if(n >= 100000000) return (n/100000000).toFixed(2).replace(/\.?0+$/,'') + '亿';
+  if(n >= 10000) return (n/10000).toFixed(n>=1000000?0:1).replace(/\.0$/,'') + '万';
+  return String(n);
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, function(m){
+  return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[m]; }); }
+
+/* ============ 条件构造 ============ */
+function mkEnum(tag, vals){
+  var reach = 0;
+  tag.vals.forEach(function(v){ if(vals.indexOf(v[0])>-1) reach += v[1]; });
+  return { id:nid(), type:'enum', src:tag.id, name:tag.name, ns:tag.ns, lv:tag.lv,
+    text:tag.name + ' ∈ {' + vals.join(', ') + '}', reach:reach, confirmed:true,
+    note:tag.caveat || '', vals:vals };
+}
+function mkInterest(cands, chosen){
+  var reach = 0, names = [];
+  chosen.forEach(function(id){
+    var t = INTERESTS.filter(function(x){ return x.id===id; })[0];
+    if(t){ reach += t.reach; names.push(t.name); }
+  });
+  reach = Math.round(reach * (chosen.length>1 ? 0.82 : 1));
+  var top = INTERESTS.filter(function(x){ return x.id === chosen[0]; })[0] ||
+            INTERESTS.filter(function(x){ return x.id === cands[0]; })[0];
+  return { id:nid(), type:'interest', src:top.id, name:top.name, ns:top.ns, lv:top.lv,
+    text: names.length ? names.join(' 或 ') : '（待选择兴趣标签）',
+    reach:reach, confirmed:chosen.length>0, cands:cands, chosen:chosen, note:'' };
+}
+function mkBehavior(evId, w, t, mod, neg){
+  var ev = EVENTS.filter(function(x){ return x.id===evId; })[0];
+  var wf = 1, tf = 1, mf = 1;
+  WINDOWS.forEach(function(x){ if(x[0]===w) wf = x[1]; });
+  THRESH.forEach(function(x){ if(x[0]===t) tf = x[1]; });
+  MODS.forEach(function(x){ if(x[0]===mod) mf = x[2]; });
+  var reach = Math.round(TOTAL * ev.base * wf * tf * mf);
+  if(neg) reach = Math.round(TOTAL * 0.42);
+  var modTxt = '';
+  MODS.forEach(function(x){ if(x[0]===mod && x[0]!=='none') modTxt = ' ' + x[1]; });
+  return { id:nid(), type:'behavior', src:ev.id, name:ev.name, ns:ev.ns, lv:ev.lv,
+    text:(neg?'未发生 · ':'') + '近 ' + w + ' 天 ' + ev.name + (neg?'':' ≥ ' + t + ' 次') + modTxt,
+    reach:reach, confirmed:true, note:'', ev:evId, w:w, t:t, mod:mod, neg:!!neg };
+}
+
+/* ============ 渲染 ============ */
+var elChat = document.getElementById('chat');
+var elChips = document.getElementById('chips');
+var elCanvas = document.getElementById('canvas');
+var elPrev = document.getElementById('preview');
+
+var SUGGEST = [
+  { q:'找出生服高潜力但电商低消费的用户', run:function(){
+      S.groups[0].conds.push(mkEnum(ENUMS[0], ['4','5']));
+      S.groups[0].conds.push(mkEnum(ENUMS[1], ['L1','L2']));
+      return '已拆成 1 组条件。「生服高潜力」我理解为<b>生服消费等级 4/5</b>，「电商低消费」为<b>电商消费等级 L1/L2</b>——都是可穷举的枚举属性，语义无歧义，<b>已直接落盘</b>。口径不对可在中栏直接改。';
+    }},
+  { q:'再加上喜欢露营的人', run:function(){
+      var c = mkInterest(['interest.outdoor.camping','interest.outdoor.general','llm.intent.camping_purchase'], []);
+      S.groups[0].conds.push(c);
+      return '「喜欢露营」属于<b>开放集兴趣</b>，检索到 <b>3 个候选标签</b>，覆盖规模从 420 万到 3,890 万不等——<b>差了 9 倍，选错人就完全不是一批</b>。我不替你决定，请点条件卡上的「确认映射」。';
+    }},
+  { q:'排除近30天已经下过单的', run:function(){
+      S.excludes.push(mkBehavior('ecom.order', 30, 1, 'none', false));
+      return '已加入<b>排除区</b>。注意排除不进逻辑树，它是独立的一层——这样"非"就不用你理解括号优先级。';
+    }},
+  { q:'一二线城市、近30天曝光没下单', run:function(){
+      var g = { id:nid(), conds:[] };
+      g.conds.push(mkEnum(ENUMS[2], ['一线','新一线']));
+      g.conds.push(mkBehavior('ecom.impression', 30, 3, 'no_order', false));
+      S.groups.push(g);
+      return '新建了<b>条件组</b>，与已有组之间是 <b>OR</b> 关系。行为条件的时间窗和次数我给了默认值（30 天 / ≥3 次），<b>已标黄，请核对</b>。';
+    }}
+];
+
+function say(who, html){ S.msgs.push({ who:who, html:html }); renderChat(); }
+function renderChat(){
+  elChat.innerHTML = S.msgs.map(function(m){
+    return '<div class="msg ' + m.who + '">' +
+      '<span class="who">' + (m.who==='u'?'我':'Agent') + '</span>' + m.html + '</div>';
+  }).join('');
+  elChat.scrollTop = elChat.scrollHeight;
+  document.getElementById('chatns').textContent = ROLE_NAME[S.role];
+}
+function renderChips(){
+  elChips.innerHTML = SUGGEST.map(function(s,i){
+    return '<button class="chip" data-sg="' + i + '">' + esc(s.q) + '</button>';
+  }).join('');
+}
+
+function condHTML(c, zone){
+  var vis = canSee(c.lv);
+  var cls = 'cond' + (!vis ? ' denied' : (!c.confirmed ? ' pending' : ''));
+  var h = '<div class="' + cls + '">';
+  h += '<div class="cmain"><div class="crow1">';
+  h += '<span class="ctype ' + c.type + '">' + ({enum:'枚举',interest:'兴趣',behavior:'行为'})[c.type] + '</span>';
+  h += '<span class="clv' + (lvNum(c.lv)>=3?' hi':'') + '">' + c.lv + '</span>';
+  h += '<span class="ctext">' + esc(c.text) + '</span>';
+  h += '</div>';
+  if(!vis){
+    h += '<div class="cnote bad">✕ 当前角色（' + ROLE_NAME[S.role] + '）无 ' + c.lv +
+         ' 权限，该条件已从计算中剔除。可就地发起申请。</div>';
+  } else if(!c.confirmed){
+    h += '<div class="cnote warn">⚠ 开放集条件未确认语义映射，' + c.cands.length + ' 个候选待选择</div>';
+  } else if(c.note){
+    h += '<div class="cnote warn">⚠ ' + esc(c.note) + '</div>';
+  }
+  h += '</div><div class="cright">';
+  h += '<span class="cnum">' + (vis && c.confirmed ? fmt(c.reach) : '—') + '</span>';
+  h += '<div class="cacts">';
+  if(!vis) h += '<button class="mini cta" data-apply="' + c.id + '">申请权限</button>';
+  else if(!c.confirmed) h += '<button class="mini cta" data-confirm="' + c.id + '">确认映射</button>';
+  else if(c.type==='interest') h += '<button class="mini" data-confirm="' + c.id + '">改标签</button>';
+  else if(c.type==='enum') h += '<button class="mini" data-edit="' + c.id + '">改取值</button>';
+  else if(c.type==='behavior') h += '<button class="mini" data-edit="' + c.id + '">改参数</button>';
+  h += '<button class="mini" data-del="' + c.id + '">删</button>';
+  h += '</div></div></div>';
+  return h;
+}
+
+function renderCanvas(){
+  var r = compute();
+  var h = '';
+  S.groups.forEach(function(g, gi){
+    if(gi > 0) h += '<div class="joiner">— OR —</div>';
+    h += '<div class="grp"><div class="gh"><span class="gn">条件组 ' +
+      String.fromCharCode(65+gi) + ' · 组内 AND</span><span class="gc">' +
+      (r.groupRatios[gi] > 0 ? fmt(Math.round(r.groupRatios[gi]*TOTAL)) : '—') + '</span></div>';
+    if(!g.conds.length){
+      h += '<div style="padding:.6rem;font-size:.72rem;color:var(--ink-3);text-align:center">空条件组</div>';
+    } else {
+      g.conds.forEach(function(c){ h += condHTML(c, 'g'); });
+    }
+    h += '<div style="padding:.4rem .6rem;border-top:1px solid var(--rule-soft)">' +
+         '<button class="addbtn" data-add="' + g.id + '">+ 加条件</button>' +
+         (S.groups.length>1 ? ' <button class="addbtn" data-delgrp="' + g.id + '">删除本组</button>' : '') +
+         '</div></div>';
+  });
+  h += '<div class="addrow"><button class="addbtn" id="addgrp">+ 加条件组（OR）</button></div>';
+
+  h += '<div class="grp ex" style="margin-top:.2rem"><div class="gh"><span class="gn">排除区 · NOT</span>' +
+       '<span class="gc">' + (r.cut>0 ? '−' + Math.round(r.cut*100) + '%' : '—') + '</span></div>';
+  if(!S.excludes.length){
+    h += '<div style="padding:.55rem;font-size:.72rem;color:var(--ink-3);text-align:center">未设置排除条件</div>';
+  } else {
+    S.excludes.forEach(function(c){ h += condHTML(c, 'x'); });
+  }
+  h += '<div style="padding:.4rem .6rem;border-top:1px solid var(--rule-soft)">' +
+       '<button class="addbtn" data-add="EX">+ 加排除条件</button></div></div>';
+
+  if(!allConds().length){
+    h = '<div class="empty">还没有条件。<br>点左边的示例问句，或直接「+ 加条件」。</div>' + h;
+  }
+  elCanvas.innerHTML = h;
+}
+
+function renderPreview(){
+  var r = compute(), pend = pending(), den = denied(), t = tgi();
+  var h = '';
+  var delta = (lastReach !== null && lastReach !== r.reach)
+    ? '<span class="delta ' + (r.reach>lastReach?'up':'dn') + '">' +
+      (r.reach>lastReach?'+':'−') + fmt(Math.abs(r.reach-lastReach)) + '</span>' : '';
+  h += '<div class="kpi"><div class="kl">预估规模</div>' +
+       '<div class="kv" id="bignum">' + fmt(r.reach) + '</div>' +
+       '<div class="kd">占大盘 ' + (r.ratio*100).toFixed(2) + '% ' + delta + '</div></div>';
+
+  if(den.length){
+    h += '<div class="kpi bad"><div class="kl">✕ 权限不足</div><div class="kd">' + den.length +
+         ' 个条件因当前角色权限被剔除，规模不可信。切回「产运」或就地申请。</div></div>';
+  }
+  if(pend.length){
+    h += '<div class="kpi warn"><div class="kl">⚠ 待确认</div><div class="kd">' + pend.length +
+         ' 个开放集条件未确认语义映射，尚未计入规模。</div></div>';
+  }
+  if(crossDomain()){
+    h += '<div class="kpi warn"><div class="kl">⚠ 跨域可信度</div><div class="kd">' +
+         '含跨域条件，基于账号层打通（约 85%）。<b>实际可触达可能低估 ~15%</b>，' +
+         '且未打通用户偏向低活跃 / 单端。</div></div>';
+  }
+
+  h += '<div><div class="sect">画像 TGI · vs 大盘</div><div class="bars">';
+  DIMS.forEach(function(d){
+    var v = t[d], w = Math.max(4, Math.min(100, v/2.8));
+    h += '<div class="barrow"><span>' + d + '</span><span class="bwrap"><i class="bfill" style="width:' +
+         w + '%"></i></span><span class="bn">' + v + '</span></div>';
+  });
+  h += '</div></div>';
+
+  if(r.reach > 0){
+    h += '<div class="kpi"><div class="kl">与已有人群重合</div><div class="kd">' +
+         '与「Q3 高潜召回包」重合 <b>' + overlapPct('a') + '%</b><br>' +
+         '与「生服沉默唤醒包」重合 ' + overlapPct('b') + '%</div></div>';
+  }
+
+  var blocked = pend.length>0 || den.length>0 || r.reach===0;
+  h += '<button class="bigbtn" id="next"' + (blocked?' disabled':'') + '>下一步 · 确认圈选逻辑</button>';
+  if(pend.length) h += '<div class="blockmsg">⚠ 有未确认的开放集条件，无法进入下一步</div>';
+  else if(den.length) h += '<div class="blockmsg">✕ 有无权限的条件，无法进入下一步</div>';
+  else if(r.reach===0) h += '<div class="blockmsg">请先添加至少一个条件</div>';
+  h += '<button class="ghostbtn" id="draft">存为草稿</button>';
+
+  elPrev.innerHTML = h;
+  lastReach = r.reach;
+}
+function render(){ renderCanvas(); renderPreview(); renderTabs(); }
+
+/* ============ 我的人群 ============ */
+var VIEW = 'build', SEL = AUDS[0].id, FILTER = 'all';
+var KINDN = { rule:'规则', snap:'快照', sub:'订阅' };
+var FILTERS = [['all','全部'],['sub','订阅'],['snap','快照'],['rule','规则'],['issue','有问题']];
+
+var BANNERS = {
+  build:'<span class="bl">工作台想让你点出来的三件事</span>' +
+    '<b>①</b> 三类条件三套交互——枚举带人数分布、兴趣要语义检索、行为是构造器。 ' +
+    '<b>②</b> 确认关是硬的——加一个兴趣条件试试，"生成人群"会被锁住。 ' +
+    '<b>③</b> 权限在圈人之前生效——把角色切成"分析师"，L3 标签会当场失效。',
+  assets:'<span class="bl">这一屏解决的是"圈完之后"</span>' +
+    '<b>①</b> 规则 / 快照 / 订阅是三种东西，不是一种——列表里的徽章就是它们。 ' +
+    '<b>②</b> 健康度会主动告诉你规则坏了——标签下线、口径漂移、规模骤降、权限到期，点带红黄标的那几条看。 ' +
+    '<b>③</b> 改规则不是随便改——会先告诉你被谁在用。'
+};
+
+function issueCount(){
+  var n = 0; AUDS.forEach(function(a){ n += a.issues.length; }); return n;
+}
+function renderTabs(){
+  var ic = issueCount();
+  document.getElementById('vtabs').innerHTML =
+    '<button class="vtab' + (VIEW==='build'?' on':'') + '" data-view="build">圈人工作台</button>' +
+    '<button class="vtab' + (VIEW==='assets'?' on':'') + '" data-view="assets">我的人群' +
+      '<span class="cnt2' + (ic?' alert':'') + '">' + (ic ? ic + ' 待处理' : AUDS.length) + '</span></button>';
+  document.getElementById('banner').innerHTML = BANNERS[VIEW];
+  document.getElementById('viewBuild').hidden = VIEW !== 'build';
+  document.getElementById('viewAssets').hidden = VIEW !== 'assets';
+}
+function switchView(v){
+  VIEW = v; renderTabs();
+  if(v === 'assets') renderAssets();
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+function audStatus(a){
+  if(a.issues.some(function(i){ return i.lv==='bad'; })) return ['bad','异常'];
+  if(a.issues.length) return ['warn','待处理'];
+  if(a.kind === 'rule') return ['ok','仅规则'];
+  return ['ok','生效中'];
+}
+function renderAssets(){
+  var list = AUDS.filter(function(a){
+    if(FILTER === 'all') return true;
+    if(FILTER === 'issue') return a.issues.length > 0;
+    return a.kind === FILTER;
+  });
+  document.getElementById('acount').textContent = list.length + ' / ' + AUDS.length;
+  document.getElementById('afilters').innerHTML = FILTERS.map(function(f){
+    return '<button class="fbtn' + (FILTER===f[0]?' on':'') + '" data-filter="' + f[0] + '">' + f[1] + '</button>';
+  }).join('');
+  document.getElementById('alist').innerHTML = list.map(function(a){
+    var st = audStatus(a);
+    return '<button class="arow' + (SEL===a.id?' on':'') + '" data-aud="' + a.id + '">' +
+      '<div class="a1"><span class="anm">' + esc(a.name) + '</span>' +
+      '<span class="kind ' + a.kind + '">' + KINDN[a.kind] + '</span>' +
+      '<span class="st ' + st[0] + '">' + st[1] + '</span></div>' +
+      '<div class="a2"><span>' + (a.reach ? fmt(a.reach) : '未生成') + '</span>' +
+      '<span>v' + a.ver + '</span><span>' + a.refs.length + ' 处引用</span>' +
+      '<span>更新 ' + a.updated.slice(5) + '</span></div></button>';
+  }).join('') || '<div class="empty">没有符合筛选的人群</div>';
+  renderDetail();
+}
+
+function renderDetail(){
+  var a = AUDS.filter(function(x){ return x.id === SEL; })[0];
+  var el = document.getElementById('adetail');
+  if(!a){ el.innerHTML = '<div class="empty">从左侧选一个人群</div>'; return; }
+  var h = '';
+
+  /* 健康度 */
+  h += '<div class="dsec first"><div class="sect">健康度</div><div class="hgrid">';
+  var checks = [
+    ['标签有效性', a.issues.some(function(i){ return i.t.indexOf('下线')>-1; }) ? 'bad' : 'ok'],
+    ['口径一致性', a.issues.some(function(i){ return i.t.indexOf('漂移')>-1; }) ? 'warn' : 'ok'],
+    ['规模稳定性', a.issues.some(function(i){ return i.t.indexOf('规模')>-1; }) ? 'bad' : 'ok'],
+    ['权限有效期', a.expire < 0 ? 'bad' : (a.expire <= 7 ? 'warn' : 'ok')],
+    ['效果回写', a.issues.some(function(i){ return i.t.indexOf('回写')>-1; }) ? 'warn' : 'ok']
+  ];
+  checks.forEach(function(c){
+    h += '<span class="hpill ' + c[1] + '">' + (c[1]==='ok'?'✓':(c[1]==='warn'?'⚠':'✕')) + ' ' + c[0] + '</span>';
+  });
+  h += '</div>';
+  if(a.issues.length){
+    h += '<div style="display:flex;flex-direction:column;gap:.35rem;margin-top:.5rem">';
+    a.issues.forEach(function(i, ix){
+      h += '<div class="issue' + (i.lv==='bad'?' bad':'') + '"><div class="il">' + i.t + '</div>' + i.m +
+        '<div class="ifix"><button class="mini cta" data-fix="' + a.id + '|' + ix + '">' + i.fix + '</button></div></div>';
+    });
+    h += '</div>';
+  }
+  h += '</div>';
+
+  /* 自定义设置 */
+  h += '<div class="dsec"><div class="sect">基本信息与自定义</div><div class="fieldrow">' +
+    '<div class="field" style="grid-column:1/-1"><label>名称</label>' +
+    '<input data-f="name" value="' + esc(a.name) + '"></div>' +
+    '<div class="field" style="grid-column:1/-1"><label>描述</label>' +
+    '<textarea data-f="desc">' + esc(a.desc) + '</textarea></div>' +
+    '<div class="field"><label>刷新频率</label><select data-f="freq"' +
+      (a.kind !== 'sub' ? ' disabled' : '') + '>' +
+      ['日更','周更','手动'].map(function(f){
+        return '<option' + (a.freq===f?' selected':'') + '>' + f + '</option>'; }).join('') +
+      (a.kind !== 'sub' ? '<option selected>—</option>' : '') + '</select></div>' +
+    '<div class="field"><label>规模波动告警阈值</label><select data-f="alertPct">' +
+      ['10','20','30','50'].map(function(p){
+        return '<option value="' + p + '"' + (a.alertPct===p?' selected':'') + '>±' + p + '%</option>'; }).join('') +
+      '</select></div>' +
+    '<div class="field" style="grid-column:1/-1"><label>业务分类</label><div class="bizchips">' +
+      ['电商','生服','广告','营销'].map(function(b){
+        return '<button class="bchip' + (a.biz.indexOf(b)>-1?' on':'') + '" data-biz="' + b + '">' + b + '</button>';
+      }).join('') + '</div></div>' +
+    '</div></div>';
+
+  /* 条件 */
+  h += '<div class="dsec"><div class="sect">当前规则 · v' + a.ver + '（只读，改动会产生新版本）</div><div class="condlist">' +
+    a.conds.map(function(c){ return '<div class="condro">' + esc(c) + '</div>'; }).join('') +
+    a.excl.map(function(c){ return '<div class="condro ex2">排除：' + esc(c) + '</div>'; }).join('') +
+    '</div></div>';
+
+  /* 版本 */
+  h += '<div class="dsec"><div class="sect">版本历史</div><div class="vlist">' +
+    a.versions.map(function(v, i){
+      return '<div class="vrow' + (i===0?' cur':'') + '"><span class="vv">v' + v.v + '</span>' +
+        '<span class="vn">' + esc(v.note) + ' · ' + v.by + ' · ' + v.date + '</span>' +
+        '<span class="vr">' + (v.reach ? fmt(v.reach) : '未生成') + '</span>' +
+        (i===0 ? '' : ' <button class="mini" data-roll="' + a.id + '|' + v.v + '">回滚</button>') +
+        '</div>';
+    }).join('') + '</div>' +
+    (a.versions.length>1 ? '<div style="margin-top:.35rem"><button class="mini" data-diff="' + a.id + '">对比 v' +
+      a.versions[0].v + ' 与 v' + a.versions[1].v + '</button></div>' : '') + '</div>';
+
+  /* 血缘 */
+  h += '<div class="dsec"><div class="sect">血缘引用与效果回流</div>';
+  if(!a.refs.length){
+    h += '<div class="condro">尚未被任何场景引用</div>';
+  } else {
+    h += '<div style="display:flex;flex-direction:column;gap:.3rem">' + a.refs.map(function(r){
+      return '<div class="refrow"><div class="rn2">' + esc(r.n) + '</div>' +
+        '<div class="rm">' + r.t + '</div>' +
+        (r.eff ? '<div class="re">✓ ' + esc(r.eff) + '</div>'
+               : '<div class="re none">✕ 效果未知 · 已 ' + r.days + ' 天未回写，计入健康度</div>') +
+        '</div>';
+    }).join('') + '</div>';
+  }
+  h += '</div>';
+
+  /* 操作 */
+  h += '<div class="dsec"><div class="sect">操作</div><div class="actbar">' +
+    '<button class="mini cta" data-editrule="' + a.id + '">改规则（产生新版本）</button>' +
+    '<button class="mini" data-tpl2="' + a.id + '">另存为模板</button>' +
+    '<button class="mini" data-iter="' + a.id + '">基于效果迭代再圈</button>' +
+    '<button class="mini" data-hand="' + a.id + '">转交 Owner</button>' +
+    '<button class="mini" data-off="' + a.id + '">下线</button>' +
+    '<button class="mini" data-save2="' + a.id + '">保存修改</button>' +
+    '</div><div style="font-size:.68rem;color:var(--ink-3);margin-top:.35rem;line-height:1.5">' +
+    'ID <code>' + a.id + '</code> · Owner ' + a.owner + ' · 创建 ' + a.created +
+    ' · 授权' + (a.expire<0 ? '已过期' : ('剩余 ' + a.expire + ' 天')) + '</div></div>';
+
+  el.innerHTML = h;
+}
+
+/* ============ 资产操作 ============ */
+function curAud(){ return AUDS.filter(function(x){ return x.id === SEL; })[0]; }
+var toastT = null;
+function toast(html){
+  var t = document.getElementById('toast');
+  t.innerHTML = html; t.hidden = false;
+  clearTimeout(toastT);
+  toastT = setTimeout(function(){ t.hidden = true; }, 4200);
+}
+function today(){ return '09-05'; }
+
+function openFix(key){
+  var p = key.split('|'), a = AUDS.filter(function(x){ return x.id===p[0]; })[0];
+  var iss = a.issues[+p[1]];
+  var body = '<div class="issue' + (iss.lv==='bad'?' bad':'') + '"><div class="il">' + iss.t + '</div>' + iss.m + '</div>';
+  var extra = {
+    '口径漂移':'<div class="warnbox"><div class="wl">处置方式</div>系统会把新旧口径并排给你看，你确认后规则升到新版本；' +
+      '<b>在你确认之前，该规则不会自动按新口径刷新</b>——避免"人群悄悄变了但没人知道"。</div>',
+    '规模异常告警':'<div class="warnbox"><div class="wl">已自动执行</div>刷新暂停、下游分发暂停、通知已发给你和上游标签 Owner。' +
+      '<b>宁可停，也不能让下游静默投一批错的人。</b></div>',
+    '引用标签已下线':'<div class="warnbox"><div class="wl">可替代标签</div>' +
+      '系统按语义相近度推荐：<b>生服到店核销行为</b>（L2，行为类，口径更硬）、<b>生服消费等级 4/5</b>（L2）。<br>' +
+      '替换后规则升版本，历史版本保留可回溯。</div>',
+    '权限即将到期':'<div class="warnbox"><div class="wl">续期规则</div>L3 受控级续期需 <b>标签 Owner 重新确认用途</b>，不是自动通过。' +
+      '到期未续则规则失效、下游停止消费。</div>',
+    '效果未回写':'<div class="warnbox"><div class="wl">催办</div>会向「门店到访提升策略」的负责人发送回流提醒。' +
+      '<b>回流契约是跳转时签的，不是事后求的</b>——这条记录会一直挂在健康度上直到回写。</div>'
+  }[iss.t] || '';
+  openModal(iss.fix, iss.t, body + extra,
+    '<span class="fnote">对应 PRD 第 06 节的长期维护机制</span>' +
+    '<button class="btn sec" data-close="1">稍后</button>' +
+    '<button class="btn pri" data-confirmact="fix|' + p[0] + '|' + p[1] + '">确认处置</button>');
+}
+
+function openRoll(key){
+  var p = key.split('|'), a = AUDS.filter(function(x){ return x.id===p[0]; })[0];
+  var v = a.versions.filter(function(x){ return x.v === +p[1]; })[0];
+  openModal('回滚到 v' + v.v, a.name,
+    '<div class="recap"><div class="rl">将发生什么</div>回滚会<b>新建 v' + (a.ver+1) +
+    '</b>，内容等于 v' + v.v + '，<em>不会删除任何历史版本</em>。<br>规模预计回到 <em>' + fmt(v.reach) + '</em>。</div>' +
+    (a.refs.length ? '<div class="warnbox"><div class="wl">影响面</div>该规则当前被 <b>' + a.refs.length +
+      ' 处</b>引用：' + a.refs.map(function(r){ return r.n; }).join('、') +
+      '。回滚后它们消费到的人群会变化，<b>系统会通知这些引用方</b>。</div>' : ''),
+    '<button class="btn sec" data-close="1">取消</button>' +
+    '<button class="btn pri" data-confirmact="roll|' + p[0] + '|' + p[1] + '">确认回滚</button>');
+}
+
+function openDiff(id){
+  var a = AUDS.filter(function(x){ return x.id===id; })[0];
+  var v0 = a.versions[0], v1 = a.versions[1];
+  var d = (a.id === 'aud_10241')
+    ? [['same','生服消费等级 ∈ {4, 5}'],['same','电商消费等级 ∈ {L1, L2}'],['add','+ 排除：近 30 天 电商下单 ≥ 1 次']]
+    : (a.id === 'aud_10233')
+    ? [['same','异地出行意图（L3）'],['same','生服消费等级 ∈ {3, 4, 5}'],['add','+ 排除：近 7 天 生服到店核销 ≥ 1 次']]
+    : [['same','进店意图（L3）'],['rem','− 生服消费等级 ∈ {3, 4, 5}'],['add','+ 生服消费等级 ∈ {4, 5}']];
+  openModal('版本对比', 'v' + v1.v + ' → v' + v0.v,
+    '<div class="diff">' + d.map(function(x){
+      return '<div class="dl ' + x[0] + '">' + esc(x[1]) + '</div>'; }).join('') + '</div>' +
+    '<div class="rgrid"><div class="rcard"><div class="rl">v' + v1.v + ' 规模</div><div class="rv">' +
+    fmt(v1.reach) + '</div></div><div class="rcard"><div class="rl">v' + v0.v + ' 规模</div><div class="rv">' +
+    fmt(v0.reach) + '</div><div class="rd">' + (v0.reach>v1.reach?'+':'−') + fmt(Math.abs(v0.reach-v1.reach)) +
+    '</div></div></div>' +
+    '<div class="warnbox"><div class="wl">为什么要留版本</div>没有版本历史，你永远回答不了"上次那批人和这次为什么不一样"。' +
+    '<b>diff 比在群里翻聊天记录管用。</b></div>',
+    '<button class="btn sec" data-close="1">关闭</button>');
+}
+
+function openEditRule(id){
+  var a = AUDS.filter(function(x){ return x.id===id; })[0];
+  openModal('修改规则', a.name,
+    (a.refs.length
+      ? '<div class="warnbox"><div class="wl">⚠ 影响面提示 · 这一步最容易被省略</div>' +
+        '该规则当前被 <b>' + a.refs.length + ' 处</b>在用：<br>' +
+        a.refs.map(function(r){ return '· <b>' + esc(r.n) + '</b>（' + r.t + '）'; }).join('<br>') +
+        '<br><br><b>修改会产生 v' + (a.ver+1) + '，这些引用方消费到的人群会随之变化。</b>' +
+        '系统会在保存时通知它们，并允许它们锁定在旧版本。</div>'
+      : '<div class="warnbox"><div class="wl">影响面</div>该规则暂无引用方，可安全修改。</div>') +
+    '<div class="recap"><div class="rl">修改会怎么走</div>' +
+    '点确认后会<em>带着当前条件回到圈人工作台</em>，改完重新走确认关；' +
+    '<b>SQL 由 IR 重新编译，你不会也不能直接改 SQL。</b></div>',
+    '<span class="fnote">v' + a.ver + ' → v' + (a.ver+1) + '</span>' +
+    '<button class="btn sec" data-close="1">取消</button>' +
+    '<button class="btn pri" data-confirmact="editrule|' + id + '">去工作台修改</button>');
+}
+
+function openTemplate(id){
+  var a = AUDS.filter(function(x){ return x.id===id; })[0];
+  openModal('另存为模板', a.name,
+    '<div class="recap"><div class="rl">参数化后的模板</div>' +
+    a.conds.map(function(c){
+      return c.replace(/∈ \{[^}]+\}/, '∈ <em>{取值}</em>').replace(/（L3）/, '（L3）'); }).join('<br>') +
+    (a.excl.length ? '<br>排除：' + a.excl.map(function(c){
+      return c.replace(/近 \d+ 天/, '近 <em>{N}</em> 天'); }).join('、') : '') + '</div>' +
+    '<div class="warnbox"><div class="wl">模板解决什么</div>' +
+    '同一套圈法，不同业务线只是取值不同（生服换电商、30 天换 7 天）。' +
+    '模板把结构固定下来、把取值留成变量，<b>团队里其他人不用从零想一遍条件怎么搭</b>。<br><br>' +
+    '模板存进团队共享空间，可被 fork；fork 出来的规则保留对模板的血缘。</div>',
+    '<button class="btn sec" data-close="1">取消</button>' +
+    '<button class="btn pri" data-confirmact="tpl|' + id + '">存入团队模板库</button>');
+}
+
+function openIterate(id){
+  var a = AUDS.filter(function(x){ return x.id===id; })[0];
+  var hasEff = a.refs.some(function(r){ return r.eff; });
+  openModal('基于效果迭代再圈', a.name,
+    (hasEff
+      ? '<div class="contract"><div class="cl2">已回流的效果</div>' +
+        a.refs.filter(function(r){ return r.eff; }).map(function(r){
+          return '<b>' + esc(r.n) + '</b>：' + esc(r.eff); }).join('<br>') + '</div>'
+      : '<div class="issue bad"><div class="il">无法迭代</div>该人群还没有任何回流效果数据。' +
+        '<b>没有回流就没有闭环</b>，迭代无从谈起——这正是回流契约必须在分发时签的原因。</div>') +
+    (hasEff ? '<div class="sect">选一种迭代方式</div><div class="saveopt">' +
+      '<button class="sopt on"><div class="sn">排除已转化的，再跑一轮</div>' +
+      '<div class="sd">把本轮已转化用户加进排除区，避免重复投放</div></button>' +
+      '<button class="sopt"><div class="sn">按转化人群特征扩一批相似的</div>' +
+      '<div class="sd">以转化用户为种子做 Lookalike 扩展</div></button>' +
+      '<button class="sopt"><div class="sn">按效果分层，做分层投放</div>' +
+      '<div class="sd">把人群按转化概率拆成高/中/低三档</div></button></div>' +
+      '<div class="warnbox"><div class="wl">这就是闭环</div>' +
+      '圈人 → 分发 → 回流 → 再圈，产物是同一条规则的 v' + (a.ver+1) +
+      '，<b>与 v' + a.ver + ' 的效果可直接对比</b>。SOP 就是这么闭上的。</div>' : ''),
+    '<button class="btn sec" data-close="1">关闭</button>' +
+    (hasEff ? '<button class="btn pri" data-confirmact="iter|' + id + '">生成 v' + (a.ver+1) + '</button>' : ''));
+}
+
+function openHandover(id){
+  var a = AUDS.filter(function(x){ return x.id===id; })[0];
+  openModal('转交 Owner', a.name,
+    '<div class="field"><label>转交给</label><select><option>林 · 电商人群策略</option>' +
+    '<option>孙 · 算法</option><option>团队公共账号</option></select></div>' +
+    '<div class="warnbox"><div class="wl">为什么需要这个</div>' +
+    '创建人离职或转岗时，名下规则会变成无主资产——没人维护、没人续期、下游还在用。<br>' +
+    '<b>治理流程里的「离职联动 +1 接管」说的就是这件事</b>，产品侧要有对应的入口。</div>',
+    '<button class="btn sec" data-close="1">取消</button>' +
+    '<button class="btn pri" data-confirmact="hand|' + id + '">确认转交</button>');
+}
+
+function openOffline(id){
+  var a = AUDS.filter(function(x){ return x.id===id; })[0];
+  openModal('下线人群', a.name,
+    (a.refs.length
+      ? '<div class="issue bad"><div class="il">✕ 存在引用，不可直接下线</div>' +
+        '该人群仍被 <b>' + a.refs.length + ' 处</b>引用：' +
+        a.refs.map(function(r){ return esc(r.n); }).join('、') + '。<br>' +
+        '<b>需先解除引用，或通知引用方切换人群。</b>下线不是删除——冻结 → 复核 → 销毁，三步走，全程可溯源。</div>'
+      : '<div class="warnbox"><div class="wl">下线流程</div>无引用，可直接下线。' +
+        '下线后进入<b>冻结</b>状态 30 天，期间可恢复；到期后销毁。</div>'),
+    '<button class="btn sec" data-close="1">取消</button>' +
+    (a.refs.length ? '' : '<button class="btn pri" data-confirmact="off|' + id + '">确认下线</button>'));
+}
+
+function doConfirmAct(key){
+  var p = key.split('|'), act = p[0];
+  var a = AUDS.filter(function(x){ return x.id===p[1]; })[0];
+  closeModal();
+  if(act === 'fix'){
+    var iss = a.issues[+p[2]];
+    a.issues.splice(+p[2], 1);
+    if(iss.t === '口径漂移' || iss.t === '引用标签已下线'){
+      a.ver += 1;
+      a.versions.unshift({ v:a.ver, date:today(), by:'我', note:'处置「' + iss.t + '」后更新规则', reach:a.reach });
+      a.updated = '2026-' + today();
+    }
+    if(iss.t === '权限即将到期') a.expire = 90;
+    toast('已处置「<b>' + iss.t + '</b>」。健康度已更新。');
+    renderAssets(); return;
+  }
+  if(act === 'roll'){
+    var v = a.versions.filter(function(x){ return x.v === +p[2]; })[0];
+    a.ver += 1; a.reach = v.reach;
+    a.versions.unshift({ v:a.ver, date:today(), by:'我', note:'回滚至 v' + v.v, reach:v.reach });
+    a.updated = '2026-' + today();
+    toast('已回滚，产生 <b>v' + a.ver + '</b>。历史版本全部保留，' + a.refs.length + ' 处引用方已收到通知。');
+    renderAssets(); return;
+  }
+  if(act === 'editrule'){
+    switchView('build');
+    say('a', '已载入规则 <b>' + esc(a.name) + '</b>（v' + a.ver + '）的条件到画布。' +
+      '改完重新走确认关，保存后会产生 <b>v' + (a.ver+1) + '</b>。' +
+      '<br><br>（demo 里未真实回填条件，真实产品中这里会把 IR 反序列化到画布上。）');
+    return;
+  }
+  if(act === 'tpl'){ toast('已存入团队模板库：<b>' + esc(a.name) + ' · 模板</b>。其他人可 fork，fork 出的规则保留血缘。'); return; }
+  if(act === 'iter'){
+    a.ver += 1;
+    a.reach = Math.round(a.reach * 0.72);
+    a.versions.unshift({ v:a.ver, date:today(), by:'我', note:'基于回流效果迭代：排除已转化用户', reach:a.reach });
+    a.updated = '2026-' + today();
+    toast('已生成 <b>v' + a.ver + '</b>，排除本轮已转化用户后规模 ' + fmt(a.reach) + '。可与 v' + (a.ver-1) + ' 直接对比效果。');
+    renderAssets(); return;
+  }
+  if(act === 'hand'){ a.owner = '林'; toast('已转交。<b>Owner 变更会同步到治理平台的授权记录</b>。'); renderAssets(); return; }
+  if(act === 'off'){
+    AUDS = AUDS.filter(function(x){ return x.id !== a.id; });
+    SEL = AUDS.length ? AUDS[0].id : null;
+    toast('已下线，进入<b>冻结</b>状态 30 天，期间可恢复。');
+    renderAssets(); return;
+  }
+}
+
+/* ============ 弹窗 ============ */
+var mask = document.getElementById('mask');
+function openModal(title, sub, body, foot){
+  document.getElementById('mtitle').textContent = title;
+  document.getElementById('msub').textContent = sub || '';
+  document.getElementById('mbody').innerHTML = body;
+  document.getElementById('mfoot').innerHTML = foot;
+  mask.hidden = false;
+}
+function closeModal(){ mask.hidden = true; }
+mask.addEventListener('click', function(e){ if(e.target === mask) closeModal(); });
+document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeModal(); });
+
+/* ---- 加条件：三个 tab ---- */
+var pickTab = 'enum', pickTarget = null, pickState = {};
+function openPicker(target){
+  pickTarget = target; pickTab = 'enum'; pickState = { enumTag:null, enumVals:[], ints:[], q:'',
+    ev:'ecom.impression', w:30, t:3, mod:'none' };
+  renderPicker();
+}
+function renderPicker(){
+  var b = '<div class="tabs">' +
+    ['enum','interest','behavior'].map(function(k){
+      var n = { enum:'A 类 · 枚举属性', interest:'B 类 · 兴趣标签', behavior:'C 类 · 行为事件' }[k];
+      return '<button class="tab' + (pickTab===k?' on':'') + '" data-tab="' + k + '">' + n + '</button>';
+    }).join('') + '</div>';
+
+  if(pickTab === 'enum'){
+    b += '<div class="tabnote">取值域封闭，<b>选完即可执行，零语义风险</b>。每个取值后面直接挂人数，选之前就知道会圈到多少。</div>';
+    if(!pickState.enumTag){
+      b += '<div class="optlist">' + ENUMS.map(function(t){
+        var lock = !canSee(t.lv);
+        return '<button class="opt' + (lock?' locked':'') + '" data-etag="' + t.id + '"' + (lock?' disabled':'') + '>' +
+          '<div class="ob"><div class="on1"><span class="onm">' + t.name + '</span>' +
+          '<span class="clv' + (lvNum(t.lv)>=3?' hi':'') + '">' + t.lv + '</span>' +
+          (lock?'<span class="clv hi">需申请</span>':'') + '</div>' +
+          '<div class="od">' + t.desc + '</div>' +
+          '<div class="om"><span>' + t.id + '</span><span>' + t.vals.length + ' 个取值</span></div></div></button>';
+      }).join('') + '</div>';
+    } else {
+      var tg = ENUMS.filter(function(x){ return x.id===pickState.enumTag; })[0];
+      var mx = Math.max.apply(null, tg.vals.map(function(v){ return v[1]; }));
+      b += '<div style="font-size:.8rem;font-weight:700">' + tg.name +
+           ' <button class="mini" data-eback="1" style="margin-left:.4rem">换标签</button></div>';
+      b += '<div class="tabnote" style="margin-top:.3rem">' + tg.desc +
+           (tg.caveat ? '<br><b style="color:var(--gov)">⚠ ' + tg.caveat + '</b>' : '') + '</div>';
+      b += '<div class="optlist">' + tg.vals.map(function(v){
+        var on = pickState.enumVals.indexOf(v[0]) > -1;
+        return '<button class="opt' + (on?' on':'') + '" data-eval="' + esc(v[0]) + '">' +
+          '<span class="ck">' + (on?'✓':'') + '</span><div class="ob">' +
+          '<div class="onm">' + esc(v[0]) + '</div>' +
+          '<div class="valbar"><i style="width:' + Math.max(2,(v[1]/mx*100)) + '%"></i></div></div>' +
+          '<span class="cnt">' + fmt(v[1]) + '</span></button>';
+      }).join('') + '</div>';
+    }
+  }
+
+  if(pickTab === 'interest'){
+    b += '<div class="tabnote">取值域开放、持续新增，<b>用户不知道系统里有没有想要的那个 tag、叫什么名字</b>——所以是语义检索，不是下拉框。选中后条件会标记为<b>待确认</b>。</div>';
+    b += '<input class="srch" id="isrch" placeholder="描述你要的兴趣，比如：露营 / 火锅 / 异地出行 / 护肤" value="' + esc(pickState.q) + '">';
+    var q = pickState.q.trim();
+    var list = q ? INTERESTS.filter(function(t){
+      return t.name.indexOf(q)>-1 || t.desc.indexOf(q)>-1 ||
+             t.kw.some(function(k){ return k.indexOf(q)>-1 || q.indexOf(k)>-1; });
+    }) : INTERESTS.slice(0,4);
+    if(!list.length){
+      b += '<div class="warnbox"><div class="wl">检索无结果</div>当前资产库里没有匹配「' + esc(q) +
+           '」的标签。<b>可一键提资产需求</b>，回流给标签供给方——这也是治理流程里"驱动标签迭代"的入口。</div>';
+    } else {
+      b += '<div class="optlist">' + list.map(function(t){
+        var lock = !canSee(t.lv), on = pickState.ints.indexOf(t.id)>-1;
+        return '<button class="opt' + (on?' on':'') + (lock?' locked':'') + '" data-itag="' + t.id + '"' + (lock?' disabled':'') + '>' +
+          '<span class="ck">' + (on?'✓':'') + '</span><div class="ob">' +
+          '<div class="on1"><span class="onm">' + t.name + '</span>' +
+          '<span class="clv' + (lvNum(t.lv)>=3?' hi':'') + '">' + t.lv + '</span>' +
+          (lock?'<span class="clv hi">需申请</span>':'') + '</div>' +
+          '<div class="od">' + t.desc + '</div>' +
+          '<div class="om"><span>' + t.src + '</span><span>' + t.freq + '</span>' +
+          (t.acc ? '<span>' + t.acc + '</span>' : '') + '</div></div>' +
+          '<span class="cnt">' + fmt(t.reach) + '</span></button>';
+      }).join('') + '</div>';
+      if(pickState.ints.length > 1){
+        b += '<div class="warnbox"><div class="wl">多选提示</div>已选 ' + pickState.ints.length +
+             ' 个标签，组内为 <b>OR</b>。两两重合度约 <b>' + (18 + pickState.ints.length*9) +
+             '%</b>，合并后规模并非简单相加。</div>';
+      }
+    }
+  }
+
+  if(pickTab === 'behavior'){
+    b += '<div class="tabnote">行为是<b>动词</b>，需要「行为 × 时间窗 × 阈值」三要素。风险不在理解，在<b>口径</b>——"曝光"算不算划过即曝光、"转化"算下单还是支付。</div>';
+    b += '<div class="sect">常用组合</div><div class="tplrow">' + TPL.map(function(t,i){
+      return '<button class="chip" data-tpl="' + i + '">' + t.n + '</button>'; }).join('') + '</div>';
+    b += '<div class="builder"><span class="lbl">用户</span><select id="bneg"><option value="0">做过</option><option value="1">没做过</option></select>';
+    b += '<select id="bev">' + EVENTS.map(function(e){
+      return '<option value="' + e.id + '"' + (pickState.ev===e.id?' selected':'') + (!canSee(e.lv)?' disabled':'') +
+        '>' + e.name + (canSee(e.lv)?'':' · 需 ' + e.lv) + '</option>'; }).join('') + '</select>';
+    b += '<span class="lbl">近</span><select id="bw">' + WINDOWS.map(function(w){
+      return '<option value="' + w[0] + '"' + (pickState.w===w[0]?' selected':'') + '>' + w[0] + ' 天</option>'; }).join('') + '</select>';
+    b += '<span class="lbl">≥</span><select id="bt">' + THRESH.map(function(t){
+      return '<option value="' + t[0] + '"' + (pickState.t===t[0]?' selected':'') + '>' + t[0] + ' 次</option>'; }).join('') + '</select>';
+    b += '<select id="bmod">' + MODS.map(function(m){
+      return '<option value="' + m[0] + '"' + (pickState.mod===m[0]?' selected':'') + '>' + m[1] + '</option>'; }).join('') + '</select></div>';
+    var prev = mkBehavior(pickState.ev, pickState.w, pickState.t, pickState.mod, false);
+    b += '<div class="warnbox"><div class="wl">预览</div>' + esc(prev.text) + ' → 约 <b>' + fmt(prev.reach) +
+         '</b><br>时间窗与阈值为<b>系统默认值</b>，IR 中标记 <code>window_source: system_default</code>，前端标黄待核对。</div>';
+  }
+
+  var can = (pickTab==='enum' && pickState.enumVals.length) ||
+            (pickTab==='interest' && pickState.ints.length) || pickTab==='behavior';
+  var foot = '<span class="fnote">' +
+    (pickTab==='interest' ? '选中后条件为「待确认」状态，需在画布上二次确认' : '') + '</span>' +
+    '<button class="btn sec" data-close="1">取消</button>' +
+    '<button class="btn pri" id="pickok"' + (can?'':' disabled') + '>加入画布</button>';
+  openModal('添加条件', pickTarget==='EX' ? '加入排除区' : '加入条件组', b, foot);
+}
+
+/* ---- 确认映射 ---- */
+var confirmId = null, confirmSel = [];
+function openConfirm(cid){
+  var c = allConds().filter(function(x){ return x.id===cid; })[0];
+  if(!c) return;
+  confirmId = cid; confirmSel = (c.chosen || []).slice();
+  renderConfirm();
+}
+function renderConfirm(){
+  var c = allConds().filter(function(x){ return x.id===confirmId; })[0];
+  var b = '<div class="warnbox"><div class="wl">为什么要你点这一下</div>' +
+    '你说的是「' + esc(c.cands ? '喜欢露营的人' : c.name) + '」，系统检索到多个语义相近的标签，' +
+    '<b>覆盖规模差异可达数倍</b>。选错，圈出来的就不是同一批人。<b>Agent 不替你决定。</b></div>';
+  b += '<div class="optlist">' + c.cands.map(function(id){
+    var t = INTERESTS.filter(function(x){ return x.id===id; })[0];
+    var lock = !canSee(t.lv), on = confirmSel.indexOf(id)>-1;
+    return '<button class="opt' + (on?' on':'') + (lock?' locked':'') + '" data-csel="' + id + '"' + (lock?' disabled':'') + '>' +
+      '<span class="ck">' + (on?'✓':'') + '</span><div class="ob">' +
+      '<div class="on1"><span class="onm">' + t.name + '</span>' +
+      '<span class="clv' + (lvNum(t.lv)>=3?' hi':'') + '">' + t.lv + '</span>' +
+      (lock?'<span class="clv hi">当前角色无权限</span>':'') + '</div>' +
+      '<div class="od">' + t.desc + '</div>' +
+      '<div class="om"><span>' + t.src + '</span><span>' + t.freq + '</span>' +
+      (t.acc?'<span>' + t.acc + '</span>':'') + '<span>' + t.id + '</span></div></div>' +
+      '<span class="cnt">' + fmt(t.reach) + '</span></button>';
+  }).join('') + '</div>';
+  var foot = '<span class="fnote">IR 中该条件 <code>confirmed</code> 将置为 true</span>' +
+    '<button class="btn sec" data-close="1">稍后</button>' +
+    '<button class="btn pri" id="cfok"' + (confirmSel.length?'':' disabled') + '>确认映射</button>';
+  openModal('确认语义映射', '开放集条件 · 必须人工确认', b, foot);
+}
+
+/* ---- 最终确认页 ---- */
+function humanText(){
+  var parts = S.groups.filter(function(g){ return g.conds.length; }).map(function(g){
+    return g.conds.map(function(c){ return '<em>' + esc(c.text) + '</em>'; }).join(' 且 ');
+  });
+  var s = parts.join('；<b>或者</b> ');
+  if(S.excludes.length){
+    s += '。<br>再从中<b>排除掉</b> ' + S.excludes.map(function(c){
+      return '<em>' + esc(c.text) + '</em>'; }).join(' 或 ') + ' 的用户。';
+  } else { s += '。'; }
+  return s;
+}
+function openFinal(){
+  var r = compute(); saveKind = 'snap';
+  var b = '<div class="recap"><div class="rl">我理解的圈选逻辑</div>' + humanText() + '</div>';
+  b += '<div class="warnbox"><div class="wl">口径提醒</div>' +
+    '「生服消费等级」的定义<b>是否包含履约维度尚未与 Owner 二次确认</b>；行为条件的时间窗为系统默认值。' +
+    '确认后这两项会连同 IR 一起留痕，出问题可回溯"当时确认的是什么"。</div>';
+  b += '<div class="rgrid">' +
+    '<div class="rcard"><div class="rl">预估规模</div><div class="rv">' + fmt(r.reach) + '</div>' +
+    '<div class="rd">占大盘 ' + (r.ratio*100).toFixed(2) + '%</div></div>' +
+    '<div class="rcard"><div class="rl">最高密级</div><div class="rv">' +
+    (allConds().reduce(function(m,c){ return Math.max(m, lvNum(c.lv)); }, 1)) + ' 级</div>' +
+    '<div class="rd">按最高密级统一路由</div></div>' +
+    '<div class="rcard"><div class="rl">条件数</div><div class="rv">' + allConds().length + '</div>' +
+    '<div class="rd">' + S.groups.filter(function(g){return g.conds.length;}).length +
+    ' 组 + ' + S.excludes.length + ' 排除</div></div></div>';
+  b += '<div class="sect">保存形态</div><div class="saveopt">' +
+    '<button class="sopt on" data-save="snap"><div class="sn">人群快照 · Snapshot</div>' +
+    '<div class="sd">一次性分析用。生成后不再变，<b>不进续期循环</b></div></button>' +
+    '<button class="sopt" data-save="sub"><div class="sn">订阅 · Subscription</div>' +
+    '<div class="sd">生产投放用。日更滚动刷新，<b>走完整审批与续期</b></div></button></div>';
+  var foot = '<span class="fnote">SQL 由 IR 编译生成，只读</span>' +
+    '<button class="btn sec" data-close="1">返回修改</button>' +
+    '<button class="btn pri" id="genok">生成人群</button>';
+  openModal('确认圈选逻辑', '这一步不可跳过', b, foot);
+}
+
+/* ---- 结果页 ---- */
+var dispatchPick = null, saveKind = 'snap';
+var DISPATCH = [
+  { id:'strategy', n:'策略平台', d:'发券 / 权益 / 活动承接', back:'策略 ID、触达人数、券核销率、转化率、GMV、A/B 分组结论' },
+  { id:'ad', n:'广告投放', d:'定向人群包', back:'曝光、点击、转化成本、ROI' },
+  { id:'algo', n:'算法 / 特征服务', d:'hive 表 / 特征接口', back:'特征重要性、AB 实验结果' },
+  { id:'dmp', n:'DMP', d:'沉淀为标准人群资产', back:'被其他场景的引用次数' },
+  { id:'none', n:'仅分析', d:'不落人群包，只出统计结果', back:null }
+];
+function openResult(){
+  dispatchPick = null; renderResult();
+}
+function renderResult(){
+  var r = compute(), t = tgi();
+  var b = '<div class="rgrid">' +
+    '<div class="rcard"><div class="rl">人群规模</div><div class="rv">' + fmt(r.reach) + '</div>' +
+    '<div class="rd">精确计算完成 · 占大盘 ' + (r.ratio*100).toFixed(2) + '%</div></div>' +
+    '<div class="rcard"><div class="rl">人群 ID</div><div class="rv" style="font-size:.82rem">aud_' +
+    (10000 + (r.reach % 8999)) + '</div><div class="rd">版本 v1 · 有效期 90 天</div></div>' +
+    '<div class="rcard"><div class="rl">与已有人群重合</div><div class="rv">' + overlapPct('a') + '%</div>' +
+    '<div class="rd">Q3 高潜召回包</div></div></div>';
+  if(crossDomain()){
+    b += '<div class="warnbox"><div class="wl">⚠ 跨域可信度</div>' +
+      '该人群依赖跨域 ID Mapping，账号层打通率约 <b>85%</b>。<b>实际可触达可能低估 ~15%</b>，' +
+      '且未打通用户偏向低活跃 / 单端——对"破圈型"场景要特别注意，你想找的可能正是这批人。</div>';
+  }
+  b += '<div><div class="sect">画像 TGI</div><div class="bars">' + DIMS.map(function(d){
+    return '<div class="barrow"><span>' + d + '</span><span class="bwrap"><i class="bfill" style="width:' +
+      Math.max(4, Math.min(100, t[d]/2.8)) + '%"></i></span><span class="bn">' + t[d] + '</span></div>';
+  }).join('') + '</div></div>';
+  b += '<div><div class="sect">分发到哪里</div><div class="dispatch">' + DISPATCH.map(function(d){
+    return '<button class="dbtn' + (dispatchPick===d.id?' on':'') + '" data-dis="' + d.id + '">' +
+      '<div class="dn">' + d.n + '</div><div class="dd">' + d.d + '</div></button>';
+  }).join('') + '</div></div>';
+  if(dispatchPick){
+    var d = DISPATCH.filter(function(x){ return x.id===dispatchPick; })[0];
+    if(d.back){
+      b += '<div class="contract"><div class="cl2">回流契约 · 跳转时一并签订</div>' +
+        '跳转会生成一条带 <code>traceId</code> 的分发记录。<b>' + d.n + '</b> 执行完成后需回写：<b>' +
+        d.back + '</b>。<br>没有回写的分发记录会在人群详情页显示为「效果未知」并计入健康度——' +
+        '<b>用可见的缺失反推下游回流，比发通知有效。</b></div>';
+    } else {
+      b += '<div class="contract"><div class="cl2">一次性分析</div>' +
+        '不落人群包、不进续期循环、无需回流契约。<b>这条轻量通道必须在 MVP 就有</b>，' +
+        '否则临时验证类需求被迫走完整审批，体验比人工写 SQL 还慢。</div>';
+    }
+  }
+  var foot = '<span class="fnote">效果回流后可一键「排除已转化的再跑一轮」</span>' +
+    '<button class="btn sec" data-close="1">关闭</button>' +
+    '<button class="btn pri" id="doneok"' + (dispatchPick?'':' disabled') + '>确认分发</button>';
+  openModal('人群已生成', '规模 ' + fmt(r.reach), b, foot);
+}
+
+/* ============ 事件 ============ */
+document.addEventListener('click', function(e){
+  var t = e.target.closest('button');
+  if(!t) return;
+  var d = t.dataset;
+
+  if(d.sg !== undefined){
+    var s = SUGGEST[+d.sg];
+    say('u', esc(s.q));
+    say('a', '<span class="thinking">正在拆解条件…</span>');
+    setTimeout(function(){
+      S.msgs.pop();
+      var reply = s.run();
+      say('a', reply);
+      render();
+    }, 480);
+    return;
+  }
+  if(t.id === 'qsend'){ handleQuery(); return; }
+  if(t.id === 'reset'){ S = fresh(); lastReach = null; boot(); return; }
+  if(d.close){ closeModal(); return; }
+
+  /* ---- 我的人群 ---- */
+  if(d.view){ switchView(d.view); return; }
+  if(d.filter){ FILTER = d.filter; renderAssets(); return; }
+  if(d.aud){ SEL = d.aud; renderAssets(); return; }
+  if(d.biz){
+    var ab = curAud(); if(!ab) return;
+    var bi = ab.biz.indexOf(d.biz);
+    if(bi>-1) ab.biz.splice(bi,1); else ab.biz.push(d.biz);
+    renderDetail(); return;
+  }
+  if(d.save2){ toast('已保存。<b>改的是元信息，不产生新版本</b>——只有条件变了才会升版本号。'); renderAssets(); return; }
+  if(d.fix){ openFix(d.fix); return; }
+  if(d.roll){ openRoll(d.roll); return; }
+  if(d.diff){ openDiff(d.diff); return; }
+  if(d.editrule){ openEditRule(d.editrule); return; }
+  if(d.tpl2){ openTemplate(d.tpl2); return; }
+  if(d.iter){ openIterate(d.iter); return; }
+  if(d.hand){ openHandover(d.hand); return; }
+  if(d.off){ openOffline(d.off); return; }
+  if(d.confirmact){ doConfirmAct(d.confirmact); return; }
+
+  if(d.add){ openPicker(d.add); return; }
+  if(t.id === 'addgrp'){ S.groups.push({ id:nid(), conds:[] }); render(); return; }
+  if(d.delgrp){ S.groups = S.groups.filter(function(g){ return g.id !== d.delgrp; });
+    if(!S.groups.length) S.groups = [{ id:nid(), conds:[] }]; render(); return; }
+  if(d.del){
+    S.groups.forEach(function(g){ g.conds = g.conds.filter(function(c){ return c.id !== d.del; }); });
+    S.excludes = S.excludes.filter(function(c){ return c.id !== d.del; });
+    render(); return;
+  }
+  if(d.confirm){ openConfirm(d.confirm); return; }
+  if(d.edit){
+    var c = allConds().filter(function(x){ return x.id===d.edit; })[0];
+    say('a', '编辑功能在 demo 里简化了——真实产品中点这里会回到对应的构造器，' +
+      '<b>改完重新编译 SQL，IR 始终是唯一真相</b>。');
+    return;
+  }
+  if(d.apply){
+    var cc = allConds().filter(function(x){ return x.id===d.apply; })[0];
+    openModal('就地发起权限申请', '不跳出圈人流程',
+      '<div class="recap"><div class="rl">Agent 代填的申请</div>' +
+      '标签：<em>' + esc(cc.name) + '</em>（' + cc.lv + '）<br>' +
+      '用途：<em>跨域高潜用户圈选，用于电商货盘差异化承接</em><br>' +
+      '有效期：<em>90 天</em></div>' +
+      '<div class="warnbox"><div class="wl">提交后会发生什么</div>' +
+      '该条件挂起为「审批中」，<b>其余条件照常预览人数</b>，你不必在这里干等。<br>' +
+      'L3 由标签 Owner 审批（90 天有效，超时 72h 升级团队）。<br>' +
+      '<b>Agent 只能代填草稿，提交仍需你确认——审批本身不可被替代。</b></div>',
+      '<span class="fnote">对应治理流程环节 04 / 06 / 07</span>' +
+      '<button class="btn sec" data-close="1">取消</button>' +
+      '<button class="btn pri" data-close="1">提交申请</button>');
+    return;
+  }
+
+  /* picker */
+  if(d.tab){ pickTab = d.tab; renderPicker(); return; }
+  if(d.etag){ pickState.enumTag = d.etag; pickState.enumVals = []; renderPicker(); return; }
+  if(d.eback){ pickState.enumTag = null; pickState.enumVals = []; renderPicker(); return; }
+  if(d.eval !== undefined){
+    var i = pickState.enumVals.indexOf(d.eval);
+    if(i>-1) pickState.enumVals.splice(i,1); else pickState.enumVals.push(d.eval);
+    renderPicker(); return;
+  }
+  if(d.itag){
+    var j = pickState.ints.indexOf(d.itag);
+    if(j>-1) pickState.ints.splice(j,1); else pickState.ints.push(d.itag);
+    renderPicker(); return;
+  }
+  if(d.tpl){
+    var tp = TPL[+d.tpl];
+    pickState.ev = tp.ev; pickState.w = tp.w; pickState.t = tp.t; pickState.mod = tp.mod;
+    renderPicker(); return;
+  }
+  if(t.id === 'pickok'){ commitPick(); return; }
+  if(d.csel){
+    var k = confirmSel.indexOf(d.csel);
+    if(k>-1) confirmSel.splice(k,1); else confirmSel.push(d.csel);
+    renderConfirm(); return;
+  }
+  if(t.id === 'cfok'){
+    var cd = allConds().filter(function(x){ return x.id===confirmId; })[0];
+    var nc = mkInterest(cd.cands, confirmSel);
+    nc.id = cd.id;
+    replaceCond(cd.id, nc);
+    closeModal();
+    say('a', '已确认映射：<b>' + esc(nc.text) + '</b>。IR 中该条件 <code>confirmed</code> 置为 true，' +
+      '现在可以进入下一步了。');
+    render(); return;
+  }
+  if(t.id === 'next'){ openFinal(); return; }
+  if(d.save){
+    saveKind = d.save;
+    document.querySelectorAll('[data-save]').forEach(function(el){ el.classList.remove('on'); });
+    t.classList.add('on'); return;
+  }
+  if(t.id === 'genok'){ closeModal(); setTimeout(openResult, 260); return; }
+  if(d.dis){ dispatchPick = d.dis; renderResult(); return; }
+  if(t.id === 'doneok'){
+    closeModal();
+    var dd = DISPATCH.filter(function(x){ return x.id===dispatchPick; })[0];
+    var rr = compute();
+    var na = {
+      id:'aud_' + (10500 + AUDS.length), name:'未命名人群 · ' + today(),
+      kind: saveKind === 'sub' ? 'sub' : 'snap',
+      reach:rr.reach, owner:'我', biz:['电商'], created:'2026-' + today(), updated:'2026-' + today(),
+      ver:1, freq: saveKind === 'sub' ? '日更' : '—', expire: saveKind === 'sub' ? 90 : 7, alertPct:'20',
+      desc:'从工作台新建。',
+      conds: S.groups.filter(function(g){ return g.conds.length; })
+              .map(function(g){ return g.conds.map(function(c){ return c.text; }).join(' 且 '); }),
+      excl: S.excludes.map(function(c){ return c.text; }),
+      versions:[{ v:1, date:today(), by:'我', note:'初版', reach:rr.reach }],
+      refs: dd && dd.back ? [{ n:dd.n + ' · 待回写', t:dd.n, eff:null, days:0 }] : [],
+      issues:[]
+    };
+    AUDS.unshift(na); SEL = na.id;
+    renderTabs();
+    say('a', '已分发，并<b>保存为' + (na.kind==='sub'?'订阅':'快照') + '</b>到「我的人群」。<br><br>' +
+      '<b>回流契约已生效</b>——在下游回写效果之前，它会在详情页显示为「效果未知」并计入健康度。' +
+      '回写之后，你就可以一键「排除已转化的，再跑一轮」。<br><br>' +
+      '👉 <b>切到上面的「我的人群」标签页看看</b>，那一屏是"圈完之后"的全部故事。');
+    return;
+  }
+  if(t.id === 'draft'){ say('a', '已存为草稿。<b>存的是 IR（规则定义），不是人群快照</b>——' +
+    '下次打开还能继续改条件，这就是规则 / 快照 / 订阅三层拆开的意义。'); return; }
+});
+
+document.addEventListener('input', function(e){
+  if(e.target.id === 'isrch'){ pickState.q = e.target.value; renderPicker();
+    var el = document.getElementById('isrch'); if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+    return; }
+  var f = e.target.dataset && e.target.dataset.f;
+  if(f){
+    var a = curAud(); if(!a) return;
+    a[f] = e.target.value;
+    if(f === 'name'){
+      var row = document.querySelector('.arow.on .anm');
+      if(row) row.textContent = e.target.value;
+    }
+  }
+});
+document.addEventListener('change', function(e){
+  var id = e.target.id;
+  if(id === 'role'){
+    S.role = e.target.value;
+    render();
+    var den = denied();
+    if(den.length){
+      say('a', '角色已切到 <b>' + ROLE_NAME[S.role] + '</b>（可见 L1–' + ROLE_MAX[S.role] + '）。' +
+        '有 <b>' + den.length + ' 个条件</b>因密级超出可见范围被剔除出计算——' +
+        '<b>权限判定发生在圈人之前，不是结果出来之后再脱敏。</b>');
+    } else {
+      say('a', '角色已切到 <b>' + ROLE_NAME[S.role] + '</b>（可见 L1–' + ROLE_MAX[S.role] + '）。当前条件均在权限范围内。');
+    }
+    return;
+  }
+  var df = e.target.dataset && e.target.dataset.f;
+  if(df){ var ca = curAud(); if(ca) ca[df] = e.target.value; return; }
+  if(id === 'bev'){ pickState.ev = e.target.value; renderPicker(); }
+  if(id === 'bw'){ pickState.w = +e.target.value; renderPicker(); }
+  if(id === 'bt'){ pickState.t = +e.target.value; renderPicker(); }
+  if(id === 'bmod'){ pickState.mod = e.target.value; renderPicker(); }
+});
+document.getElementById('qin').addEventListener('keydown', function(e){
+  if(e.key === 'Enter') handleQuery();
+});
+
+function replaceCond(id, nc){
+  S.groups.forEach(function(g){
+    g.conds = g.conds.map(function(c){ return c.id===id ? nc : c; });
+  });
+  S.excludes = S.excludes.map(function(c){ return c.id===id ? nc : c; });
+}
+function commitPick(){
+  var c = null;
+  if(pickTab === 'enum'){
+    var tg = ENUMS.filter(function(x){ return x.id===pickState.enumTag; })[0];
+    c = mkEnum(tg, pickState.enumVals);
+  } else if(pickTab === 'interest'){
+    c = mkInterest(pickState.ints, []);
+    c.text = pickState.ints.map(function(id){
+      return INTERESTS.filter(function(x){ return x.id===id; })[0].name; }).join(' 或 ');
+    c.confirmed = false;
+  } else {
+    var neg = document.getElementById('bneg');
+    c = mkBehavior(pickState.ev, pickState.w, pickState.t, pickState.mod, neg && neg.value==='1');
+    c.note = '时间窗与阈值为系统默认值，请核对';
+  }
+  if(pickTarget === 'EX') S.excludes.push(c);
+  else {
+    var g = S.groups.filter(function(x){ return x.id===pickTarget; })[0] || S.groups[0];
+    g.conds.push(c);
+  }
+  closeModal();
+  if(pickTab === 'interest'){
+    say('a', '已加入兴趣条件，状态为<b>待确认</b>。开放集条件必须人工确认语义映射后才允许执行——' +
+      '<b>「生成人群」按钮现在是锁住的。</b>');
+  }
+  render();
+}
+
+function handleQuery(){
+  var el = document.getElementById('qin');
+  var q = el.value.trim();
+  if(!q) return;
+  el.value = '';
+  say('u', esc(q));
+  say('a', '<span class="thinking">正在拆解条件…</span>');
+  setTimeout(function(){
+    S.msgs.pop();
+    var hits = [], reply = [];
+
+    ENUMS.forEach(function(t){
+      if(q.indexOf('一二线')>-1 && t.id==='trade.common.city_tier'){
+        S.groups[0].conds.push(mkEnum(t, ['一线','新一线'])); hits.push('城市等级');
+      } else if((q.indexOf('高消费')>-1||q.indexOf('高潜')>-1) && t.id==='trade.local.consume_level'){
+        S.groups[0].conds.push(mkEnum(t, ['4','5'])); hits.push('生服消费等级');
+      } else if(q.indexOf('低消费')>-1 && t.id==='trade.ecom.consume_level'){
+        S.groups[0].conds.push(mkEnum(t, ['L1','L2'])); hits.push('电商消费等级');
+      }
+    });
+
+    var im = INTERESTS.filter(function(t){
+      return t.kw.some(function(k){ return q.indexOf(k)>-1; }); });
+    if(im.length){
+      var c = mkInterest(im.map(function(x){ return x.id; }), []);
+      c.text = im.map(function(x){ return x.name; }).join(' 或 ');
+      c.confirmed = false;
+      S.groups[0].conds.push(c);
+      reply.push('检索到 <b>' + im.length + ' 个语义相近的兴趣标签</b>（' +
+        im.map(function(x){ return x.name + ' ' + fmt(x.reach); }).join('、') +
+        '）。<b>规模差异明显，我不替你决定</b>，请在条件卡上确认映射。');
+    }
+
+    var em = EVENTS.filter(function(e){ return e.kw.some(function(k){ return q.indexOf(k)>-1; }); });
+    if(em.length){
+      var neg = q.indexOf('没')>-1 || q.indexOf('未')>-1 || q.indexOf('无')>-1;
+      var mod = (q.indexOf('没下单')>-1||q.indexOf('未下单')>-1||q.indexOf('没买')>-1) ? 'no_order' : 'none';
+      var ev = em[0];
+      if(mod !== 'none' && ev.id === 'ecom.order' && em.length > 1) ev = em[1];
+      var bc = mkBehavior(ev.id, 30, mod!=='none'?3:1, mod, neg && ev.id==='ecom.order' && mod==='none');
+      bc.note = '时间窗与阈值为系统默认值，请核对';
+      if(neg && mod==='none') S.excludes.push(bc); else S.groups[0].conds.push(bc);
+      reply.push('行为条件已按<b>三要素</b>拆解：' + esc(bc.text) +
+        '。时间窗与阈值我给了默认值，<b>已标黄</b>。');
+    }
+
+    if(hits.length) reply.unshift('识别到枚举属性：<b>' + hits.join('、') +
+      '</b>，取值域封闭、语义无歧义，<b>已直接落盘</b>。');
+    if(!reply.length) reply.push('没能从这句话里拆出可执行的条件。<b>我不猜</b>——' +
+      '你说的是哪一类？枚举属性（消费等级 / 城市）、兴趣标签（露营 / 火锅），还是行为（曝光 / 下单）？');
+    say('a', reply.join('<br><br>'));
+    render();
+  }, 480);
+}
+
+function boot(){
+  S.msgs = [{ who:'a', html:'我是圈人助手。你可以直接说一句话，也可以在中栏手动点选条件——' +
+    '<b>两条路等价，随时切换</b>。<br><br>先试试下面的示例问句，按顺序点更能看出设计意图。' }];
+  renderChat(); renderChips(); render(); renderAssets();
+  document.getElementById('role').value = S.role;
+}
+boot();
+
+})();
+</script>
+</body>
+</html>
