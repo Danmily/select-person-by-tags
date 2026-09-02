@@ -363,6 +363,25 @@ code{font-family:var(--fm);font-size:.92em;background:var(--surface-2);padding:.
 .diff .dl.add{background:var(--ok-soft);color:var(--ok);}
 .diff .dl.rem{background:var(--risk-soft);color:var(--risk);}
 .diff .dl.same{background:var(--surface-2);color:var(--ink-3);}
+
+.pk{display:grid;grid-template-columns:minmax(0,1fr);gap:.55rem;}
+@media(min-width:660px){.pk{grid-template-columns:178px minmax(0,1fr);}}
+.pktree{border:1px solid var(--rule);border-radius:5px;overflow:hidden;background:var(--surface-2);
+  max-height:330px;overflow-y:auto;}
+.tnode{display:flex;justify-content:space-between;align-items:center;gap:.3rem;width:100%;
+  padding:.34rem .5rem;font-size:.735rem;text-align:left;border-bottom:1px solid var(--rule-soft);}
+.tnode:last-child{border-bottom:none;}
+.tnode.l1{font-weight:700;color:var(--ink);}
+.tnode.l2{padding-left:1.15rem;color:var(--ink-2);font-size:.705rem;}
+.tnode.on{background:var(--agent-soft);color:var(--agent);}
+.tnode:hover{background:var(--surface-3);}
+.tnode .tc{font-family:var(--fm);font-size:.6rem;color:var(--ink-3);flex:none;}
+.tnode.on .tc{color:var(--agent);}
+.pkmain{display:flex;flex-direction:column;gap:.5rem;min-width:0;}
+.crumb{font-family:var(--fm);font-size:.66rem;color:var(--ink-3);display:flex;
+  align-items:center;gap:.35rem;flex-wrap:wrap;}
+.crumb b{color:var(--ink);}
+.pkempty{padding:1.6rem .8rem;text-align:center;color:var(--ink-3);font-size:.76rem;line-height:1.7;}
 .toast{position:fixed;left:50%;bottom:1.4rem;transform:translateX(-50%);z-index:80;
   background:var(--ink);color:var(--paper);border-radius:6px;padding:.55rem .95rem;
   font-size:.79rem;line-height:1.55;box-shadow:0 12px 32px -12px rgba(0,0,0,.55);
@@ -467,47 +486,121 @@ footer{margin-top:1.4rem;padding-top:.85rem;border-top:1px solid var(--rule);
 var TOTAL = 580000000;
 
 var ENUMS = [
-  { id:'trade.local.consume_level', name:'生服消费等级', ns:'local', lv:'L2',
+  // ---- 人口属性 ----
+  { id:'trade.common.gender', name:'性别', cat:['人口属性','基础属性'], ns:'common', lv:'L1',
+    desc:'推断性别', vals:[['女',312000000],['男',256000000],['未知',12000000]] },
+  { id:'trade.common.age', name:'年龄段', cat:['人口属性','基础属性'], ns:'common', lv:'L1',
+    desc:'推断年龄段',
+    vals:[['18–25',112000000],['26–35',198000000],['36–45',154000000],['46+',116000000]] },
+  { id:'trade.common.family', name:'婚育阶段', cat:['人口属性','基础属性'], ns:'common', lv:'L2',
+    desc:'基于消费与内容行为推断的家庭阶段，置信度中等',
+    vals:[['单身',186000000],['已婚无子',142000000],['有学龄前子女',98000000],['有学龄子女',84000000],['未知',70000000]] },
+  { id:'trade.common.city_tier', name:'城市等级', cat:['人口属性','地理属性'], ns:'common', lv:'L1',
+    desc:'常驻城市分级，取近 90 天主要活跃地',
+    vals:[['一线',68000000],['新一线',96000000],['二线',124000000],['三线及以下',292000000]] },
+  { id:'trade.common.biz_circle', name:'常驻商圈类型', cat:['人口属性','地理属性'], ns:'local', lv:'L2',
+    desc:'近 90 天到店行为聚集的商圈类型',
+    vals:[['核心商圈',72000000],['社区商圈',148000000],['交通枢纽',36000000],['无明显聚集',324000000]] },
+  { id:'trade.common.device_tier', name:'机型价格档', cat:['人口属性','设备与端'], ns:'common', lv:'L2',
+    desc:'当前主力设备的发布价分档',
+    vals:[['旗舰',86000000],['中高端',174000000],['中端',208000000],['入门',112000000]] },
+
+  // ---- 消费能力 ----
+  { id:'trade.ecom.consume_level', name:'电商消费等级', cat:['消费能力','电商消费力'], ns:'ecom', lv:'L2',
+    desc:'基于近 180 天电商 GMV 与客单价的分层，L1 最低 L5 最高',
+    vals:[['L1',52000000],['L2',37100000],['L3',28000000],['L4',11000000],['L5',4200000]] },
+  { id:'trade.ecom.gmv_pct', name:'电商 GMV 分位', cat:['消费能力','电商消费力'], ns:'ecom', lv:'L3',
+    desc:'电商有交易用户内部的年度 GMV 分位（分母为电商交易用户）',
+    vals:[['P0–P50',66000000],['P50–P80',39000000],['P80–P95',19500000],['P95+',6500000]] },
+  { id:'trade.ecom.aov_band', name:'电商客单价档', cat:['消费能力','电商消费力'], ns:'ecom', lv:'L2',
+    desc:'近 180 天订单均价分档',
+    vals:[['0–50',88000000],['50–150',102000000],['150–500',64000000],['500+',22000000]] },
+  { id:'trade.local.consume_level', name:'生服消费等级', cat:['消费能力','生服消费力'], ns:'local', lv:'L2',
     desc:'基于近 180 天生服交易频次与金额的分层，1 最低 5 最高',
     caveat:'口径待确认：是否包含履约维度',
     vals:[['1',186000000],['2',142000000],['3',98000000],['4',21400000],['5',9800000]] },
-  { id:'trade.ecom.consume_level', name:'电商消费等级', ns:'ecom', lv:'L2',
-    desc:'基于近 180 天电商 GMV 与客单价的分层，L1 最低 L5 最高',
-    vals:[['L1',52000000],['L2',37100000],['L3',28000000],['L4',11000000],['L5',4200000]] },
-  { id:'trade.common.city_tier', name:'城市等级', ns:'common', lv:'L1',
-    desc:'常驻城市分级，取近 90 天主要活跃地',
-    vals:[['一线',68000000],['新一线',96000000],['二线',124000000],['三线及以下',292000000]] },
-  { id:'trade.local.gmv_pct', name:'生服 GMV 分位', ns:'local', lv:'L3',
+  { id:'trade.local.gmv_pct', name:'生服 GMV 分位', cat:['消费能力','生服消费力'], ns:'local', lv:'L3',
     desc:'生服有交易用户内部的 GMV 分位（分母为生服交易用户，非大盘）',
     vals:[['P0–P50',89000000],['P50–P80',53000000],['P80–P95',19800000],['P95+',6700000]] },
-  { id:'trade.common.age', name:'年龄段', ns:'common', lv:'L1',
-    desc:'推断年龄段',
-    vals:[['18–25',112000000],['26–35',198000000],['36–45',154000000],['46+',116000000]] }
+  { id:'trade.local.aov_band', name:'到店客单价档', cat:['消费能力','生服消费力'], ns:'local', lv:'L2',
+    desc:'近 180 天到店核销订单均价',
+    vals:[['0–30',74000000],['30–80',96000000],['80–200',52000000],['200+',18000000]] },
+  { id:'trade.cross.power_level', name:'全域消费力层级', cat:['消费能力','跨域综合'], ns:'cross', lv:'L3',
+    desc:'融合电商与生服交易的综合消费力，跨域打通后计算',
+    vals:[['T1 高',24000000],['T2 中高',68000000],['T3 中',156000000],['T4 低',214000000]] },
+  { id:'trade.cross.price_pref', name:'价格带偏好', cat:['消费能力','跨域综合'], ns:'cross', lv:'L2',
+    desc:'跨域商品与团购的成交价格带倾向',
+    vals:[['高端',38000000],['中高',92000000],['中档',186000000],['性价比',214000000]] },
+
+  // ---- 生命周期 ----
+  { id:'trade.ecom.is_new', name:'电商新客状态', cat:['生命周期','新老客'], ns:'ecom', lv:'L1',
+    desc:'首单距今时长',
+    vals:[['未下单',218000000],['新客 30 天内',42000000],['成长期',96000000],['成熟老客',224000000]] },
+  { id:'trade.local.is_new', name:'生服新客状态', cat:['生命周期','新老客'], ns:'local', lv:'L1',
+    desc:'首次核销距今时长',
+    vals:[['未核销',298000000],['新客 30 天内',34000000],['成长期',82000000],['成熟老客',166000000]] },
+  { id:'trade.common.tenure', name:'平台注册时长', cat:['生命周期','新老客'], ns:'common', lv:'L1',
+    desc:'账号注册至今',
+    vals:[['<6 个月',62000000],['6–12 个月',78000000],['1–3 年',196000000],['3 年以上',244000000]] },
+  { id:'trade.ecom.activity', name:'电商活跃分层', cat:['生命周期','活跃状态'], ns:'ecom', lv:'L2',
+    desc:'近 30 天访问与交易频次综合分层',
+    vals:[['高活',48000000],['中活',132000000],['低活',186000000],['沉默',214000000]] },
+  { id:'trade.local.activity', name:'生服活跃分层', cat:['生命周期','活跃状态'], ns:'local', lv:'L2',
+    desc:'近 30 天生服场域访问与核销分层',
+    vals:[['高活',32000000],['中活',96000000],['低活',158000000],['沉默',294000000]] },
+  { id:'trade.cross.churn_risk', name:'流失倾向', cat:['生命周期','活跃状态'], ns:'cross', lv:'L3',
+    desc:'模型预测的未来 30 天流失概率分层',
+    vals:[['高风险',68000000],['中风险',124000000],['低风险',186000000],['稳定',202000000]] },
+  { id:'trade.common.member_level', name:'会员等级', cat:['生命周期','会员与权益'], ns:'common', lv:'L2',
+    desc:'平台会员体系等级',
+    vals:[['非会员',402000000],['普通',112000000],['白银',42000000],['黄金',18000000],['钻石',6000000]] },
+
+  // ---- 类目偏好 ----
+  { id:'trade.ecom.cat1_pref', name:'电商一级类目偏好', cat:['类目偏好','电商类目'], ns:'ecom', lv:'L2',
+    desc:'近 90 天成交与浏览占比最高的一级类目',
+    vals:[['服饰',124000000],['美妆个护',96000000],['食品生鲜',108000000],['3C 数码',72000000],['家居',64000000],['母婴',46000000],['运动户外',38000000]] },
+  { id:'trade.ecom.brand_tier', name:'品牌等级偏好', cat:['类目偏好','电商类目'], ns:'ecom', lv:'L2',
+    desc:'成交商品的品牌分级倾向',
+    vals:[['国际大牌',42000000],['国内头部',118000000],['腰部品牌',186000000],['白牌',192000000]] },
+  { id:'trade.ecom.quality_pref', name:'商品质量分偏好', cat:['类目偏好','电商类目'], ns:'ecom', lv:'L2',
+    desc:'成交商品的平台质量分区间倾向',
+    vals:[['高质量分',86000000],['中质量分',248000000],['低质量分',158000000]] },
+  { id:'trade.local.cat1_pref', name:'生服一级类目偏好', cat:['类目偏好','生服类目'], ns:'local', lv:'L2',
+    desc:'近 90 天生服消费占比最高的一级类目',
+    vals:[['到店餐饮',146000000],['休闲娱乐',62000000],['丽人',38000000],['酒店旅游',54000000],['亲子',26000000]] },
+
+  // ---- 营销响应 ----
+  { id:'trade.cross.coupon_sens', name:'券敏感度', cat:['营销响应','敏感度'], ns:'cross', lv:'L2',
+    desc:'历史领券与用券行为推断的优惠敏感程度',
+    vals:[['高敏感',162000000],['中敏感',224000000],['低敏感',194000000]] },
+  { id:'trade.cross.promo_join', name:'大促参与倾向', cat:['营销响应','敏感度'], ns:'cross', lv:'L2',
+    desc:'历史大促期间的相对活跃与成交提升幅度',
+    vals:[['强参与',88000000],['一般',232000000],['不参与',260000000]] }
 ];
 
 var INTERESTS = [
-  { id:'interest.outdoor.camping', name:'户外露营', reach:12400000, lv:'L2', ns:'ecom',
+  { id:'interest.outdoor.camping', name:'户外露营', cat:['兴趣与意图','泛化兴趣'], reach:12400000, lv:'L2', ns:'ecom',
     src:'电商行为 + LLM 推理', freq:'日更', acc:null, kw:['露营','户外','帐篷','野营'],
     desc:'近 90 天有露营相关商品浏览 / 购买，或露营内容消费行为' },
-  { id:'interest.outdoor.general', name:'户外运动', reach:38900000, lv:'L1', ns:'ecom',
+  { id:'interest.outdoor.general', name:'户外运动', cat:['兴趣与意图','泛化兴趣'], reach:38900000, lv:'L1', ns:'ecom',
     src:'电商行为', freq:'日更', acc:null, kw:['露营','户外','运动','徒步','骑行'],
     desc:'户外运动大类兴趣，覆盖露营 / 徒步 / 骑行 / 钓鱼等子类（范围明显更宽）' },
-  { id:'llm.intent.camping_purchase', name:'露营装备购买意图', reach:4200000, lv:'L3', ns:'cross',
+  { id:'llm.intent.camping_purchase', name:'露营装备购买意图', cat:['兴趣与意图','LLM 语义意图'], reach:4200000, lv:'L3', ns:'cross',
     src:'LLM 推理 · 全域序列', freq:'周更', acc:'抽检准确率 87%', kw:['露营','户外','购买','意图','装备'],
     desc:'基于全域行为序列由大模型推断的短期购买意图，时效性强但覆盖窄' },
-  { id:'interest.food.hotpot', name:'火锅偏好', reach:28700000, lv:'L2', ns:'local',
+  { id:'interest.food.hotpot', name:'火锅偏好', cat:['兴趣与意图','泛化兴趣'], reach:28700000, lv:'L2', ns:'local',
     src:'生服行为', freq:'日更', acc:null, kw:['火锅','餐饮','到店','美食'],
     desc:'近 90 天火锅品类团购浏览 / 下单 / 核销行为' },
-  { id:'interest.parenting.baking', name:'亲子烘焙', reach:6800000, lv:'L2', ns:'ecom',
+  { id:'interest.parenting.baking', name:'亲子烘焙', cat:['兴趣与意图','泛化兴趣'], reach:6800000, lv:'L2', ns:'ecom',
     src:'电商行为 + 内容消费', freq:'日更', acc:null, kw:['亲子','烘焙','母婴','烘培'],
     desc:'亲子类烘焙器具与课程的兴趣人群' },
-  { id:'llm.intent.travel_nonlocal', name:'异地出行意图', reach:15600000, lv:'L3', ns:'cross',
+  { id:'llm.intent.travel_nonlocal', name:'异地出行意图', cat:['兴趣与意图','LLM 语义意图'], reach:15600000, lv:'L3', ns:'cross',
     src:'LLM 推理 · 全域序列', freq:'日更', acc:'抽检准确率 85%', kw:['出行','异地','旅游','travel','旅行'],
     desc:'跨域识别的短期异地出行意图，已在用增视频召回验证过正向' },
-  { id:'interest.beauty.skincare', name:'护肤兴趣', reach:51200000, lv:'L1', ns:'ecom',
+  { id:'interest.beauty.skincare', name:'护肤兴趣', cat:['兴趣与意图','泛化兴趣'], reach:51200000, lv:'L1', ns:'ecom',
     src:'电商行为', freq:'日更', acc:null, kw:['护肤','美妆','面膜','beauty'],
     desc:'护肤品类兴趣人群' },
-  { id:'llm.summary.shop_intent', name:'进店意图', reach:9400000, lv:'L3', ns:'local',
+  { id:'llm.summary.shop_intent', name:'进店意图', cat:['兴趣与意图','LLM 语义意图'], reach:9400000, lv:'L3', ns:'local',
     src:'LLM 推理', freq:'日更', acc:'抽检准确率 82%', kw:['进店','到店','门店','意图'],
     desc:'⚠ 该标签历史实验中出现过「GMV 正向但店铺主访负向」的指标冲突' }
 ];
@@ -734,7 +827,7 @@ function mkInterest(cands, chosen){
   var top = INTERESTS.filter(function(x){ return x.id === chosen[0]; })[0] ||
             INTERESTS.filter(function(x){ return x.id === cands[0]; })[0];
   return { id:nid(), type:'interest', src:top.id, name:top.name, ns:top.ns, lv:top.lv,
-    text: names.length ? names.join(' 或 ') : '（待选择兴趣标签）',
+    text: names.length ? names.join(' 或 ') : '（' + cands.length + ' 个候选待确认）',
     reach:reach, confirmed:chosen.length>0, cands:cands, chosen:chosen, note:'' };
 }
 function mkBehavior(evId, w, t, mod, neg){
@@ -765,7 +858,10 @@ var SUGGEST = [
       return '已拆成 1 组条件。「生服高潜力」我理解为<b>生服消费等级 4/5</b>，「电商低消费」为<b>电商消费等级 L1/L2</b>——都是可穷举的枚举属性，语义无歧义，<b>已直接落盘</b>。口径不对可在中栏直接改。';
     }},
   { q:'再加上喜欢露营的人', run:function(){
-      var c = mkInterest(['interest.outdoor.camping','interest.outdoor.general','llm.intent.camping_purchase'], []);
+      var ids = ['interest.outdoor.camping','interest.outdoor.general','llm.intent.camping_purchase'];
+      var c = mkInterest(ids, []);
+      c.text = ids.map(function(id){
+        return INTERESTS.filter(function(x){ return x.id===id; })[0].name; }).join(' / ') + '（3 个候选待确认）';
       S.groups[0].conds.push(c);
       return '「喜欢露营」属于<b>开放集兴趣</b>，检索到 <b>3 个候选标签</b>，覆盖规模从 420 万到 3,890 万不等——<b>差了 9 倍，选错人就完全不是一批</b>。我不替你决定，请点条件卡上的「确认映射」。';
     }},
@@ -920,8 +1016,8 @@ var FILTERS = [['all','全部'],['sub','订阅'],['snap','快照'],['rule','规�
 
 var BANNERS = {
   build:'<span class="bl">工作台想让你点出来的三件事</span>' +
-    '<b>①</b> 三类条件三套交互——枚举带人数分布、兴趣要语义检索、行为是构造器。 ' +
-    '<b>②</b> 确认关是硬的——加一个兴趣条件试试，"生成人群"会被锁住。 ' +
+    '<b>①</b> 标签按二级分类树浏览，<b>选中后取值面板随标签类型自动切换</b>——枚举给多选＋人数分布，兴趣给相近标签＋重合度。 ' +
+    '<b>②</b> 确认关只拦 Agent 的推断：点第 2 个示例问句会被锁住；自己从分类里挑的直接生效。 ' +
     '<b>③</b> 权限在圈人之前生效——把角色切成"分析师"，L3 标签会当场失效。',
   assets:'<span class="bl">这一屏解决的是"圈完之后"</span>' +
     '<b>①</b> 规则 / 快照 / 订阅是三种东西，不是一种——列表里的徽章就是它们。 ' +
@@ -1288,108 +1384,190 @@ function closeModal(){ mask.hidden = true; }
 mask.addEventListener('click', function(e){ if(e.target === mask) closeModal(); });
 document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeModal(); });
 
-/* ---- 加条件：三个 tab ---- */
-var pickTab = 'enum', pickTarget = null, pickState = {};
+/* ---- 加条件：标签（分类树）/ 行为事件 ---- */
+var pickTab = 'tag', pickTarget = null, pickState = {};
+
+function allTags(){
+  var out = [];
+  ENUMS.forEach(function(t){ out.push({ k:'enum', t:t }); });
+  INTERESTS.forEach(function(t){ out.push({ k:'interest', t:t }); });
+  return out;
+}
+function taxonomy(){
+  var tree = [], idx = {};
+  allTags().forEach(function(x){
+    var a = x.t.cat[0], b = x.t.cat[1];
+    if(!idx[a]){ idx[a] = { name:a, n:0, subs:[], sidx:{} }; tree.push(idx[a]); }
+    var A = idx[a];
+    if(!A.sidx[b]){ A.sidx[b] = { name:b, n:0 }; A.subs.push(A.sidx[b]); }
+    A.n++; A.sidx[b].n++;
+  });
+  return tree;
+}
 function openPicker(target){
-  pickTarget = target; pickTab = 'enum'; pickState = { enumTag:null, enumVals:[], ints:[], q:'',
-    ev:'ecom.impression', w:30, t:3, mod:'none' };
+  pickTarget = target; pickTab = 'tag';
+  pickState = { c1:null, c2:null, q:'', sel:null, enumVals:[], ints:[],
+                ev:'ecom.impression', w:30, t:3, mod:'none' };
   renderPicker();
 }
+function pickedTag(){
+  if(!pickState.sel) return null;
+  var r = allTags().filter(function(x){ return x.t.id === pickState.sel; })[0];
+  return r || null;
+}
+
 function renderPicker(){
   var b = '<div class="tabs">' +
-    ['enum','interest','behavior'].map(function(k){
-      var n = { enum:'A 类 · 枚举属性', interest:'B 类 · 兴趣标签', behavior:'C 类 · 行为事件' }[k];
-      return '<button class="tab' + (pickTab===k?' on':'') + '" data-tab="' + k + '">' + n + '</button>';
+    [['tag','标签 · 属性与兴趣'],['behavior','行为事件']].map(function(k){
+      return '<button class="tab' + (pickTab===k[0]?' on':'') + '" data-tab="' + k[0] + '">' + k[1] + '</button>';
     }).join('') + '</div>';
 
-  if(pickTab === 'enum'){
-    b += '<div class="tabnote">取值域封闭，<b>选完即可执行，零语义风险</b>。每个取值后面直接挂人数，选之前就知道会圈到多少。</div>';
-    if(!pickState.enumTag){
-      b += '<div class="optlist">' + ENUMS.map(function(t){
-        var lock = !canSee(t.lv);
-        return '<button class="opt' + (lock?' locked':'') + '" data-etag="' + t.id + '"' + (lock?' disabled':'') + '>' +
-          '<div class="ob"><div class="on1"><span class="onm">' + t.name + '</span>' +
-          '<span class="clv' + (lvNum(t.lv)>=3?' hi':'') + '">' + t.lv + '</span>' +
-          (lock?'<span class="clv hi">需申请</span>':'') + '</div>' +
-          '<div class="od">' + t.desc + '</div>' +
-          '<div class="om"><span>' + t.id + '</span><span>' + t.vals.length + ' 个取值</span></div></div></button>';
-      }).join('') + '</div>';
-    } else {
-      var tg = ENUMS.filter(function(x){ return x.id===pickState.enumTag; })[0];
-      var mx = Math.max.apply(null, tg.vals.map(function(v){ return v[1]; }));
-      b += '<div style="font-size:.8rem;font-weight:700">' + tg.name +
-           ' <button class="mini" data-eback="1" style="margin-left:.4rem">换标签</button></div>';
-      b += '<div class="tabnote" style="margin-top:.3rem">' + tg.desc +
-           (tg.caveat ? '<br><b style="color:var(--gov)">⚠ ' + tg.caveat + '</b>' : '') + '</div>';
-      b += '<div class="optlist">' + tg.vals.map(function(v){
-        var on = pickState.enumVals.indexOf(v[0]) > -1;
-        return '<button class="opt' + (on?' on':'') + '" data-eval="' + esc(v[0]) + '">' +
-          '<span class="ck">' + (on?'✓':'') + '</span><div class="ob">' +
-          '<div class="onm">' + esc(v[0]) + '</div>' +
-          '<div class="valbar"><i style="width:' + Math.max(2,(v[1]/mx*100)) + '%"></i></div></div>' +
-          '<span class="cnt">' + fmt(v[1]) + '</span></button>';
-      }).join('') + '</div>';
-    }
-  }
+  if(pickTab === 'behavior'){ b += behaviorPane(); }
+  else if(pickState.sel){    b += valuePane(); }
+  else {                     b += browsePane(); }
 
-  if(pickTab === 'interest'){
-    b += '<div class="tabnote">取值域开放、持续新增，<b>用户不知道系统里有没有想要的那个 tag、叫什么名字</b>——所以是语义检索，不是下拉框。选中后条件会标记为<b>待确认</b>。</div>';
-    b += '<input class="srch" id="isrch" placeholder="描述你要的兴趣，比如：露营 / 火锅 / 异地出行 / 护肤" value="' + esc(pickState.q) + '">';
-    var q = pickState.q.trim();
-    var list = q ? INTERESTS.filter(function(t){
-      return t.name.indexOf(q)>-1 || t.desc.indexOf(q)>-1 ||
-             t.kw.some(function(k){ return k.indexOf(q)>-1 || q.indexOf(k)>-1; });
-    }) : INTERESTS.slice(0,4);
-    if(!list.length){
-      b += '<div class="warnbox"><div class="wl">检索无结果</div>当前资产库里没有匹配「' + esc(q) +
-           '」的标签。<b>可一键提资产需求</b>，回流给标签供给方——这也是治理流程里"驱动标签迭代"的入口。</div>';
-    } else {
-      b += '<div class="optlist">' + list.map(function(t){
-        var lock = !canSee(t.lv), on = pickState.ints.indexOf(t.id)>-1;
-        return '<button class="opt' + (on?' on':'') + (lock?' locked':'') + '" data-itag="' + t.id + '"' + (lock?' disabled':'') + '>' +
-          '<span class="ck">' + (on?'✓':'') + '</span><div class="ob">' +
-          '<div class="on1"><span class="onm">' + t.name + '</span>' +
-          '<span class="clv' + (lvNum(t.lv)>=3?' hi':'') + '">' + t.lv + '</span>' +
-          (lock?'<span class="clv hi">需申请</span>':'') + '</div>' +
-          '<div class="od">' + t.desc + '</div>' +
-          '<div class="om"><span>' + t.src + '</span><span>' + t.freq + '</span>' +
-          (t.acc ? '<span>' + t.acc + '</span>' : '') + '</div></div>' +
-          '<span class="cnt">' + fmt(t.reach) + '</span></button>';
-      }).join('') + '</div>';
-      if(pickState.ints.length > 1){
-        b += '<div class="warnbox"><div class="wl">多选提示</div>已选 ' + pickState.ints.length +
-             ' 个标签，组内为 <b>OR</b>。两两重合度约 <b>' + (18 + pickState.ints.length*9) +
-             '%</b>，合并后规模并非简单相加。</div>';
-      }
-    }
-  }
-
-  if(pickTab === 'behavior'){
-    b += '<div class="tabnote">行为是<b>动词</b>，需要「行为 × 时间窗 × 阈值」三要素。风险不在理解，在<b>口径</b>——"曝光"算不算划过即曝光、"转化"算下单还是支付。</div>';
-    b += '<div class="sect">常用组合</div><div class="tplrow">' + TPL.map(function(t,i){
-      return '<button class="chip" data-tpl="' + i + '">' + t.n + '</button>'; }).join('') + '</div>';
-    b += '<div class="builder"><span class="lbl">用户</span><select id="bneg"><option value="0">做过</option><option value="1">没做过</option></select>';
-    b += '<select id="bev">' + EVENTS.map(function(e){
-      return '<option value="' + e.id + '"' + (pickState.ev===e.id?' selected':'') + (!canSee(e.lv)?' disabled':'') +
-        '>' + e.name + (canSee(e.lv)?'':' · 需 ' + e.lv) + '</option>'; }).join('') + '</select>';
-    b += '<span class="lbl">近</span><select id="bw">' + WINDOWS.map(function(w){
-      return '<option value="' + w[0] + '"' + (pickState.w===w[0]?' selected':'') + '>' + w[0] + ' 天</option>'; }).join('') + '</select>';
-    b += '<span class="lbl">≥</span><select id="bt">' + THRESH.map(function(t){
-      return '<option value="' + t[0] + '"' + (pickState.t===t[0]?' selected':'') + '>' + t[0] + ' 次</option>'; }).join('') + '</select>';
-    b += '<select id="bmod">' + MODS.map(function(m){
-      return '<option value="' + m[0] + '"' + (pickState.mod===m[0]?' selected':'') + '>' + m[1] + '</option>'; }).join('') + '</select></div>';
-    var prev = mkBehavior(pickState.ev, pickState.w, pickState.t, pickState.mod, false);
-    b += '<div class="warnbox"><div class="wl">预览</div>' + esc(prev.text) + ' → 约 <b>' + fmt(prev.reach) +
-         '</b><br>时间窗与阈值为<b>系统默认值</b>，IR 中标记 <code>window_source: system_default</code>，前端标黄待核对。</div>';
-  }
-
-  var can = (pickTab==='enum' && pickState.enumVals.length) ||
-            (pickTab==='interest' && pickState.ints.length) || pickTab==='behavior';
-  var foot = '<span class="fnote">' +
-    (pickTab==='interest' ? '选中后条件为「待确认」状态，需在画布上二次确认' : '') + '</span>' +
+  var cur = pickedTag();
+  var can = pickTab === 'behavior' ||
+            (cur && cur.k === 'enum' && pickState.enumVals.length) ||
+            (cur && cur.k === 'interest' && pickState.ints.length);
+  var note = pickTab === 'behavior' ? '时间窗与阈值为系统默认值，加入后会标黄待核对'
+           : (cur && cur.k === 'interest' ? '你自己从分类里选的标签，无需再确认语义映射' : '');
+  var foot = '<span class="fnote">' + note + '</span>' +
     '<button class="btn sec" data-close="1">取消</button>' +
     '<button class="btn pri" id="pickok"' + (can?'':' disabled') + '>加入画布</button>';
   openModal('添加条件', pickTarget==='EX' ? '加入排除区' : '加入条件组', b, foot);
+}
+
+/* 浏览态：左树 + 右列表 */
+function browsePane(){
+  var tree = taxonomy(), q = pickState.q.trim();
+  var h = '<div class="pk"><div class="pktree">';
+  h += '<button class="tnode l1' + (!pickState.c1?' on':'') + '" data-c1="">' +
+       '<span>全部</span><span class="tc">' + allTags().length + '</span></button>';
+  tree.forEach(function(A){
+    h += '<button class="tnode l1' + (pickState.c1===A.name && !pickState.c2 ?' on':'') +
+         '" data-c1="' + esc(A.name) + '"><span>' + A.name + '</span><span class="tc">' + A.n + '</span></button>';
+    if(pickState.c1 === A.name){
+      A.subs.forEach(function(B){
+        h += '<button class="tnode l2' + (pickState.c2===B.name?' on':'') +
+             '" data-c1="' + esc(A.name) + '" data-c2="' + esc(B.name) + '">' +
+             '<span>' + B.name + '</span><span class="tc">' + B.n + '</span></button>';
+      });
+    }
+  });
+  h += '</div><div class="pkmain">';
+  h += '<input class="srch" id="tsrch" placeholder="搜索标签名或含义…" value="' + esc(pickState.q) + '">';
+
+  var list = allTags().filter(function(x){
+    if(pickState.c1 && x.t.cat[0] !== pickState.c1) return false;
+    if(pickState.c2 && x.t.cat[1] !== pickState.c2) return false;
+    if(!q) return true;
+    var t = x.t;
+    return t.name.indexOf(q)>-1 || (t.desc||'').indexOf(q)>-1 || t.id.indexOf(q)>-1 ||
+           (t.kw||[]).some(function(k){ return k.indexOf(q)>-1 || q.indexOf(k)>-1; });
+  });
+
+  h += '<div class="crumb">' +
+       (pickState.c1 ? '<b>' + esc(pickState.c1) + '</b>' : '全部分类') +
+       (pickState.c2 ? ' › <b>' + esc(pickState.c2) + '</b>' : '') +
+       ' · 共 ' + list.length + ' 个标签</div>';
+
+  if(!list.length){
+    h += '<div class="warnbox"><div class="wl">检索无结果</div>' +
+      '当前资产库里没有匹配「' + esc(q) + '」的标签。<b>可一键提资产需求</b>，' +
+      '回流给标签供给方——这也是治理流程里"驱动标签迭代"的入口。</div>';
+  } else {
+    h += '<div class="optlist">' + list.map(function(x){
+      var t = x.t, lock = !canSee(t.lv);
+      var meta = x.k === 'enum'
+        ? [t.id, t.vals.length + ' 个取值']
+        : [t.src, t.freq].concat(t.acc?[t.acc]:[]);
+      return '<button class="opt' + (lock?' locked':'') + '" data-ptag="' + t.id + '"' + (lock?' disabled':'') + '>' +
+        '<div class="ob"><div class="on1"><span class="onm">' + t.name + '</span>' +
+        '<span class="ctype ' + x.k + '">' + (x.k==='enum'?'枚举':'兴趣') + '</span>' +
+        '<span class="clv' + (lvNum(t.lv)>=3?' hi':'') + '">' + t.lv + '</span>' +
+        (lock?'<span class="clv hi">需申请</span>':'') + '</div>' +
+        '<div class="od">' + t.desc + '</div>' +
+        '<div class="om">' + meta.map(function(m){ return '<span>' + m + '</span>'; }).join('') + '</div></div>' +
+        (x.k==='interest' ? '<span class="cnt">' + fmt(t.reach) + '</span>' : '') +
+        '</button>';
+    }).join('') + '</div>';
+  }
+  h += '</div></div>';
+  return h;
+}
+
+/* 取值态：根据标签类型自动切换 */
+function valuePane(){
+  var cur = pickedTag(), t = cur.t;
+  var h = '<div class="crumb"><button class="mini" data-pback="1">← 返回列表</button>' +
+          esc(t.cat[0]) + ' › ' + esc(t.cat[1]) + ' › <b>' + esc(t.name) + '</b></div>';
+  h += '<div class="tabnote">' + t.desc +
+       (t.caveat ? '<br><b style="color:var(--gov)">⚠ ' + t.caveat + '</b>' : '') + '</div>';
+
+  if(cur.k === 'enum'){
+    var mx = Math.max.apply(null, t.vals.map(function(v){ return v[1]; }));
+    h += '<div class="sect">选择取值 · 组内为 OR</div>';
+    h += '<div class="optlist">' + t.vals.map(function(v){
+      var on = pickState.enumVals.indexOf(v[0]) > -1;
+      return '<button class="opt' + (on?' on':'') + '" data-eval="' + esc(v[0]) + '">' +
+        '<span class="ck">' + (on?'✓':'') + '</span><div class="ob">' +
+        '<div class="onm">' + esc(v[0]) + '</div>' +
+        '<div class="valbar"><i style="width:' + Math.max(2,(v[1]/mx*100)) + '%"></i></div></div>' +
+        '<span class="cnt">' + fmt(v[1]) + '</span></button>';
+    }).join('') + '</div>';
+    if(pickState.enumVals.length){
+      var sum = 0;
+      t.vals.forEach(function(v){ if(pickState.enumVals.indexOf(v[0])>-1) sum += v[1]; });
+      h += '<div class="warnbox"><div class="wl">已选</div>' + pickState.enumVals.join('、') +
+           ' → 合计约 <b>' + fmt(sum) + '</b>（取值互斥，可直接相加）</div>';
+    }
+  } else {
+    var sibs = INTERESTS.filter(function(x){ return x.cat[1] === t.cat[1]; });
+    h += '<div class="sect">该标签已选 · 可一并选入相近标签（组内为 OR）</div>';
+    h += '<div class="optlist">' + sibs.map(function(x){
+      var on = pickState.ints.indexOf(x.id) > -1, lock = !canSee(x.lv);
+      return '<button class="opt' + (on?' on':'') + (lock?' locked':'') + '" data-itag="' + x.id + '"' + (lock?' disabled':'') + '>' +
+        '<span class="ck">' + (on?'✓':'') + '</span><div class="ob">' +
+        '<div class="on1"><span class="onm">' + x.name + '</span>' +
+        '<span class="clv' + (lvNum(x.lv)>=3?' hi':'') + '">' + x.lv + '</span>' +
+        (lock?'<span class="clv hi">需申请</span>':'') + '</div>' +
+        '<div class="od">' + x.desc + '</div>' +
+        '<div class="om"><span>' + x.src + '</span><span>' + x.freq + '</span>' +
+        (x.acc?'<span>' + x.acc + '</span>':'') + '</div></div>' +
+        '<span class="cnt">' + fmt(x.reach) + '</span></button>';
+    }).join('') + '</div>';
+    if(pickState.ints.length > 1){
+      h += '<div class="warnbox"><div class="wl">多选提示</div>已选 ' + pickState.ints.length +
+           ' 个标签，组内为 <b>OR</b>。两两重合度约 <b>' + (18 + pickState.ints.length*9) +
+           '%</b>，合并后规模并非简单相加。</div>';
+    }
+    h += '<div class="tabnote"><b>注意：</b>你是自己从分类里挑的标签，语义没有歧义，' +
+         '<b>加入后直接生效，不需要过确认关</b>。确认关只针对 Agent 从自然语言替你推断出来的映射。</div>';
+  }
+  return h;
+}
+
+/* 行为构造器 */
+function behaviorPane(){
+  var b = '<div class="tabnote">行为是<b>动词</b>，需要「行为 × 时间窗 × 阈值」三要素。' +
+    '风险不在理解，在<b>口径</b>——"曝光"算不算划过即曝光、"转化"算下单还是支付。</div>';
+  b += '<div class="sect">常用组合</div><div class="tplrow">' + TPL.map(function(t,i){
+    return '<button class="chip" data-tpl="' + i + '">' + t.n + '</button>'; }).join('') + '</div>';
+  b += '<div class="builder"><span class="lbl">用户</span><select id="bneg"><option value="0">做过</option><option value="1">没做过</option></select>';
+  b += '<select id="bev">' + EVENTS.map(function(e){
+    return '<option value="' + e.id + '"' + (pickState.ev===e.id?' selected':'') + (!canSee(e.lv)?' disabled':'') +
+      '>' + e.name + (canSee(e.lv)?'':' · 需 ' + e.lv) + '</option>'; }).join('') + '</select>';
+  b += '<span class="lbl">近</span><select id="bw">' + WINDOWS.map(function(w){
+    return '<option value="' + w[0] + '"' + (pickState.w===w[0]?' selected':'') + '>' + w[0] + ' 天</option>'; }).join('') + '</select>';
+  b += '<span class="lbl">≥</span><select id="bt">' + THRESH.map(function(t){
+    return '<option value="' + t[0] + '"' + (pickState.t===t[0]?' selected':'') + '>' + t[0] + ' 次</option>'; }).join('') + '</select>';
+  b += '<select id="bmod">' + MODS.map(function(m){
+    return '<option value="' + m[0] + '"' + (pickState.mod===m[0]?' selected':'') + '>' + m[1] + '</option>'; }).join('') + '</select></div>';
+  var prev = mkBehavior(pickState.ev, pickState.w, pickState.t, pickState.mod, false);
+  b += '<div class="warnbox"><div class="wl">预览</div>' + esc(prev.text) + ' → 约 <b>' + fmt(prev.reach) +
+       '</b><br>时间窗与阈值为<b>系统默认值</b>，IR 中标记 <code>window_source: system_default</code>，前端标黄待核对。</div>';
+  return b;
 }
 
 /* ---- 确认映射 ---- */
@@ -1592,9 +1770,21 @@ document.addEventListener('click', function(e){
   }
 
   /* picker */
-  if(d.tab){ pickTab = d.tab; renderPicker(); return; }
-  if(d.etag){ pickState.enumTag = d.etag; pickState.enumVals = []; renderPicker(); return; }
-  if(d.eback){ pickState.enumTag = null; pickState.enumVals = []; renderPicker(); return; }
+  if(d.tab){ pickTab = d.tab; pickState.sel = null; renderPicker(); return; }
+  if(d.c1 !== undefined){
+    if(d.c2){ pickState.c1 = d.c1; pickState.c2 = d.c2; }
+    else if(d.c1 === ''){ pickState.c1 = null; pickState.c2 = null; }
+    else if(pickState.c1 === d.c1 && !pickState.c2){ pickState.c1 = null; pickState.c2 = null; }
+    else { pickState.c1 = d.c1; pickState.c2 = null; }
+    pickState.sel = null; renderPicker(); return;
+  }
+  if(d.ptag){
+    pickState.sel = d.ptag; pickState.enumVals = [];
+    var pk = pickedTag();
+    pickState.ints = (pk && pk.k === 'interest') ? [d.ptag] : [];
+    renderPicker(); return;
+  }
+  if(d.pback){ pickState.sel = null; pickState.enumVals = []; pickState.ints = []; renderPicker(); return; }
   if(d.eval !== undefined){
     var i = pickState.enumVals.indexOf(d.eval);
     if(i>-1) pickState.enumVals.splice(i,1); else pickState.enumVals.push(d.eval);
@@ -1664,8 +1854,8 @@ document.addEventListener('click', function(e){
 });
 
 document.addEventListener('input', function(e){
-  if(e.target.id === 'isrch'){ pickState.q = e.target.value; renderPicker();
-    var el = document.getElementById('isrch'); if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  if(e.target.id === 'tsrch'){ pickState.q = e.target.value; renderPicker();
+    var el = document.getElementById('tsrch'); if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
     return; }
   var f = e.target.dataset && e.target.dataset.f;
   if(f){
@@ -1711,18 +1901,20 @@ function replaceCond(id, nc){
 }
 function commitPick(){
   var c = null;
-  if(pickTab === 'enum'){
-    var tg = ENUMS.filter(function(x){ return x.id===pickState.enumTag; })[0];
-    c = mkEnum(tg, pickState.enumVals);
-  } else if(pickTab === 'interest'){
-    c = mkInterest(pickState.ints, []);
-    c.text = pickState.ints.map(function(id){
-      return INTERESTS.filter(function(x){ return x.id===id; })[0].name; }).join(' 或 ');
-    c.confirmed = false;
-  } else {
+  if(pickTab === 'behavior'){
     var neg = document.getElementById('bneg');
     c = mkBehavior(pickState.ev, pickState.w, pickState.t, pickState.mod, neg && neg.value==='1');
     c.note = '时间窗与阈值为系统默认值，请核对';
+  } else {
+    var cur = pickedTag();
+    if(!cur) return;
+    if(cur.k === 'enum'){
+      c = mkEnum(cur.t, pickState.enumVals);
+    } else {
+      // 用户自己从分类树里挑的，语义无歧义 —— 直接生效，不过确认关
+      c = mkInterest(pickState.ints, pickState.ints);
+      c.confirmed = true;
+    }
   }
   if(pickTarget === 'EX') S.excludes.push(c);
   else {
@@ -1730,9 +1922,12 @@ function commitPick(){
     g.conds.push(c);
   }
   closeModal();
-  if(pickTab === 'interest'){
-    say('a', '已加入兴趣条件，状态为<b>待确认</b>。开放集条件必须人工确认语义映射后才允许执行——' +
-      '<b>「生成人群」按钮现在是锁住的。</b>');
+  if(pickTab === 'tag'){
+    var k = pickedTag();
+    if(k && k.k === 'interest'){
+      say('a', '已加入兴趣条件「<b>' + esc(c.text) + '</b>」，<b>直接生效</b>。' +
+        '你是自己从分类里挑的，语义没有歧义——<b>确认关只针对我从自然语言替你推断出来的映射</b>。');
+    }
   }
   render();
 }
