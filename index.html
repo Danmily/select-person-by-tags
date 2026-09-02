@@ -393,7 +393,7 @@ footer{margin-top:1.4rem;padding-top:.85rem;border-top:1px solid var(--rule);
   <button class="tbtn" id="reset">重置</button>
 </div>
 
-<div style="background:var(--risk-soft);border:1px solid var(--risk);border-radius:5px;padding:.55rem .8rem;margin-bottom:.7rem;font-size:.78rem;color:var(--ink-2);line-height:1.6"><b style="color:var(--risk)">设计原型 · 数据均为虚构</b>　本页用于演示交互形态。所有标签、口径、人群与数值均为示例，不代表任何真实业务数据或线上系统。</div>
+<div style="background:var(--gov-soft);border:1px solid var(--gov);border-radius:5px;padding:.55rem .8rem;margin-bottom:.7rem;font-size:.78rem;color:var(--ink-2);line-height:1.6"><b style="color:var(--gov)">设计原型 · 示例数据</b>　本页用于演示交互形态，所有标签、口径、人群与数值均为虚构示例。</div>
 <div class="banner" id="banner"></div>
 
 <div class="vtabs" id="vtabs"></div>
@@ -444,7 +444,7 @@ footer{margin-top:1.4rem;padding-top:.85rem;border-top:1px solid var(--rule);
 
 <footer>
   圈人 Agent 交互原型 · 配套《圈人智能体》PRD v0.3 第 01/02/03/08 节。<br>
-  所有数字为模拟计算，标签、口径与人群均为虚构示例，非真实业务数据。
+  所有数字为模拟计算，标签与口径为示例，非真实数据。
 </footer>
 </div>
 
@@ -503,13 +503,13 @@ var INTERESTS = [
     desc:'亲子类烘焙器具与课程的兴趣人群' },
   { id:'llm.intent.travel_nonlocal', name:'异地出行意图', reach:15600000, lv:'L3', ns:'cross',
     src:'LLM 推理 · 全域序列', freq:'日更', acc:'抽检准确率 85%', kw:['出行','异地','旅游','travel','旅行'],
-    desc:'跨域识别的短期异地出行意图，示例：跨域识别的短期意图标签' },
+    desc:'跨域识别的短期异地出行意图，已在用增视频召回验证过正向' },
   { id:'interest.beauty.skincare', name:'护肤兴趣', reach:51200000, lv:'L1', ns:'ecom',
     src:'电商行为', freq:'日更', acc:null, kw:['护肤','美妆','面膜','beauty'],
     desc:'护肤品类兴趣人群' },
   { id:'llm.summary.shop_intent', name:'进店意图', reach:9400000, lv:'L3', ns:'local',
     src:'LLM 推理', freq:'日更', acc:'抽检准确率 82%', kw:['进店','到店','门店','意图'],
-    desc:'⚠ 示例：该类标签可能出现主指标正向、护栏指标负向的冲突' }
+    desc:'⚠ 该标签历史实验中出现过「GMV 正向但店铺主访负向」的指标冲突' }
 ];
 
 var EVENTS = [
@@ -588,14 +588,14 @@ var AUDS = [
   { id:'aud_10233', name:'异地出行意图 · 用增召回', kind:'sub',
     reach:9400000, owner:'我', biz:['生服'], created:'2026-08-05', updated:'2026-09-01',
     ver:2, freq:'日更', expire:34, alertPct:'20',
-    desc:'示例场景：面向流失倾向人群的内容召回。',
+    desc:'对标已验证正向的用增视频召回场景（支付流失人群人均订单 +1.4%）。',
     conds:['异地出行意图（L3）','生服消费等级 ∈ {3, 4, 5}'],
     excl:['近 7 天 生服到店核销 ≥ 1 次'],
     versions:[
       { v:2, date:'08-22', by:'我', note:'加入排除近 7 天已核销', reach:21800000 },
       { v:1, date:'08-05', by:'我', note:'初版', reach:24600000 }
     ],
-    refs:[ { n:'用增视频召回', t:'算法 / 特征服务', eff:'AB 正向 · 目标人群人均订单 +1.2%（示例数据）' } ],
+    refs:[ { n:'用增视频召回', t:'算法 / 特征服务', eff:'AB 正向 · 支付流失人群人均订单 +1.4012%' } ],
     issues:[
       { lv:'bad', t:'规模异常告警', m:'09-01 刷新后规模由 <b>2,180万 骤降至 940万（−57%）</b>，超出你设置的 20% 波动阈值。初判为上游「异地出行意图」标签当日产出延迟。',
         fix:'已自动暂停分发 · 查看详情' } ] },
@@ -634,7 +634,7 @@ var AUDS = [
     ],
     refs:[ { n:'门店到访提升策略', t:'策略平台', eff:null, days:22 } ],
     issues:[
-      { lv:'bad', t:'引用标签已下线', m:'规则引用的 <b>进店意图</b> 标签已于 08-30 被 Owner 回收下线（示例：主指标正向但护栏指标负向，被判定为不可推全）。<b>该规则已自动失效，无法再刷新。</b>',
+      { lv:'bad', t:'引用标签已下线', m:'规则引用的 <b>进店意图</b> 标签已于 08-30 被 Owner 回收下线（历史实验出现「GMV 正向但店铺主访负向」的指标冲突）。<b>该规则已自动失效，无法再刷新。</b>',
         fix:'查看可替代标签' },
       { lv:'warn', t:'权限即将到期', m:'L3 标签授权 <b>5 天后到期</b>，受控级续期需 Owner 重新确认用途。',
         fix:'发起续期' },
