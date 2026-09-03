@@ -382,6 +382,48 @@ code{font-family:var(--fm);font-size:.92em;background:var(--surface-2);padding:.
   align-items:center;gap:.35rem;flex-wrap:wrap;}
 .crumb b{color:var(--ink);}
 .pkempty{padding:1.6rem .8rem;text-align:center;color:var(--ink-3);font-size:.76rem;line-height:1.7;}
+
+/* ===== 语义映射面板 ===== */
+.mapintro{background:var(--agent-soft);border-left:3px solid var(--agent);border-radius:0 5px 5px 0;
+  padding:.6rem .8rem;font-size:.76rem;line-height:1.65;color:var(--ink-2);}
+.mapintro b{color:var(--ink);}
+.mapintro .ph{font-family:var(--fm);font-size:.7rem;color:var(--agent);font-weight:700;}
+.cand{border:1px solid var(--rule);border-radius:5px;background:var(--surface);padding:.6rem .7rem;
+  display:flex;gap:.6rem;align-items:flex-start;width:100%;text-align:left;}
+.cand:hover{border-color:var(--agent);}
+.cand.on{border-color:var(--agent);background:var(--agent-soft);}
+.cand.locked{opacity:.6;}
+.cand .ck2{width:15px;height:15px;border:1.5px solid var(--rule);border-radius:3px;flex:none;margin-top:.15rem;
+  display:grid;place-items:center;font-size:.6rem;color:#fff;}
+.cand.on .ck2{background:var(--agent);border-color:var(--agent);}
+:root[data-theme="dark"] .cand.on .ck2{color:#131320;}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .cand.on .ck2{color:#131320;}}
+.cand .cb{flex:1;min-width:0;display:flex;flex-direction:column;gap:.22rem;}
+.cand .c1{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;}
+.cand .cn2{font-size:.82rem;font-weight:700;color:var(--ink);}
+.cand .cid{font-family:var(--fm);font-size:.62rem;color:var(--ink-3);}
+.candrow{display:grid;grid-template-columns:52px minmax(0,1fr);gap:.4rem;font-size:.7rem;line-height:1.55;}
+.candrow .cl4{font-family:var(--fm);font-size:.58rem;letter-spacing:.06em;color:var(--ink-3);
+  font-weight:700;padding-top:.1rem;}
+.candrow .cv2{color:var(--ink-2);}
+.candrow .cv2 b{color:var(--ink);}
+.cand .cwarn{background:var(--gov-soft);border-radius:3px;padding:.3rem .45rem;font-size:.69rem;
+  color:var(--ink-2);line-height:1.55;}
+.cand .cwarn.bad{background:var(--risk-soft);}
+.cand .cr{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;}
+.cand .cnum2{font-family:var(--fm);font-size:.78rem;font-weight:700;color:var(--ink);}
+.evb{font-family:var(--fm);font-size:.56rem;font-weight:700;padding:.1rem .34rem;border-radius:2px;white-space:nowrap;}
+.evb.strong{background:var(--ok-soft);color:var(--ok);}
+.evb.mid{background:var(--agent-soft);color:var(--agent);}
+.evb.none{background:var(--surface-3);color:var(--ink-3);}
+.vsbox{background:var(--surface-2);border:1px dashed var(--rule);border-radius:5px;padding:.6rem .75rem;
+  font-size:.73rem;line-height:1.65;color:var(--ink-2);}
+.vsbox .vt{font-family:var(--fm);font-size:.6rem;letter-spacing:.09em;text-transform:uppercase;
+  font-weight:700;color:var(--ink-3);margin-bottom:.3rem;}
+.vsbox code{font-family:var(--fm);font-size:.7rem;background:var(--surface);padding:.15rem .3rem;
+  border-radius:2px;display:block;margin:.3rem 0;color:var(--ink-2);}
+.vsbox .x{color:var(--risk);font-weight:600;}
+
 .toast{position:fixed;left:50%;bottom:1.4rem;transform:translateX(-50%);z-index:80;
   background:var(--ink);color:var(--paper);border-radius:6px;padding:.55rem .95rem;
   font-size:.79rem;line-height:1.55;box-shadow:0 12px 32px -12px rgba(0,0,0,.55);
@@ -735,6 +777,69 @@ var AUDS = [
         fix:'催办回流' } ] }
 ];
 
+
+/* ===== 业务词典：业务语言 → 候选资产（这一层才是 Agent 的价值所在） ===== */
+var BIZ_TERMS = {
+  '高消费': {
+    phrase:'高消费 / 消费力强 / 买得起',
+    cands:[
+      { tag:'trade.ecom.consume_level', vals:['L4','L5'], label:'电商消费等级 L4/L5',
+        caliber:'近 180 天电商 GMV 与客单价分层', denom:'全量用户', reach:15200000,
+        lv:'L2', evidence:'该场景用过 3 次，1 次正显著（GMV +0.43%）', evLv:'strong' },
+      { tag:'trade.local.consume_level', vals:['4','5'], label:'生服消费等级 4/5',
+        caliber:'近 180 天生服交易频次与金额分层', denom:'全量用户', reach:31200000,
+        lv:'L2', warn:'与电商消费等级<b>尺度不同</b>，两者不可直接类比',
+        evidence:'该场景用过 1 次，暂未显著', evLv:'mid' },
+      { tag:'trade.ecom.gmv_pct', vals:['P80–P95','P95+'], label:'电商 GMV 分位 ≥ P80',
+        caliber:'电商交易用户内部的年度 GMV 分位', denom:'⚠️ 电商交易用户（<b>非全量</b>）', reach:26000000,
+        lv:'L3', warn:'分母与前两个不同，圈出的人重合度仅约 42%',
+        evidence:'无历史使用记录', evLv:'none' },
+      { tag:'trade.cross.power_level', vals:['T1 高'], label:'全域消费力层级 T1',
+        caliber:'融合电商与生服交易的综合消费力', denom:'全量用户', reach:24000000,
+        lv:'L3', evidence:'跨域场景用过 2 次，均正显著', evLv:'strong' }
+    ]},
+  '低消费': {
+    phrase:'低消费 / 消费力弱 / 客单低',
+    cands:[
+      { tag:'trade.ecom.consume_level', vals:['L1','L2'], label:'电商消费等级 L1/L2',
+        caliber:'近 180 天电商 GMV 与客单价分层', denom:'全量用户', reach:89100000,
+        lv:'L2', evidence:'该场景用过 3 次，1 次正显著', evLv:'strong' },
+      { tag:'trade.ecom.aov_band', vals:['0–50','50–150'], label:'电商客单价档 ≤150',
+        caliber:'近 180 天订单均价分档', denom:'⚠️ 电商<b>有交易</b>用户', reach:19000000,
+        lv:'L2', warn:'分母不含未下单用户，<b>会漏掉"从没买过"的人</b>', evidence:'无历史使用记录', evLv:'none' }
+    ]},
+  '高潜': {
+    phrase:'高潜力 / 潜力用户 / 有潜力',
+    cands:[
+      { tag:'trade.local.consume_level', vals:['4','5'], label:'生服消费等级 4/5',
+        caliber:'近 180 天生服交易频次与金额', denom:'全量用户', reach:31200000,
+        lv:'L2', evidence:'该场景用过 1 次，暂未显著', evLv:'mid' },
+      { tag:'trade.local.gmv_pct', vals:['P80–P95','P95+'], label:'生服 GMV 分位 ≥ P80',
+        caliber:'生服交易用户内部的 GMV 分位', denom:'⚠️ 生服交易用户（<b>非全量</b>）', reach:26500000,
+        lv:'L3', warn:'与消费等级<b>分母不同</b>，不是同一批人', evidence:'无历史使用记录', evLv:'none' },
+      { tag:'user_value_score', vals:['T1'], label:'用户价值分层 T1',
+        caliber:'模型预测的用户长期价值', denom:'全量用户', reach:24000000,
+        lv:'L3', warn:'🔴 这是<b>预测分</b>，回答的是"会不会买"，<b>不是"因为我才买"</b>。用于增量场景会圈到本来就会买的人',
+        evidence:'无对照组验证', evLv:'none' }
+    ]},
+  '流失': {
+    phrase:'流失 / 流失用户 / 掉了',
+    cands:[
+      { tag:'trade.cross.churn_risk', vals:['高风险'], label:'流失倾向 · 高风险',
+        caliber:'模型预测未来 30 天流失概率', denom:'全量用户', reach:68000000,
+        lv:'L3', evidence:'唤回场景用过 4 次，2 次正显著', evLv:'strong' },
+      { tag:'trade.ecom.activity', vals:['沉默'], label:'电商活跃分层 · 沉默',
+        caliber:'近 30 天访问与交易频次综合分层', denom:'全量用户', reach:21400000,
+        lv:'L2', warn:'⚠️ 资产库中另有<b>「31天及以上流失客」的 3 个版本</b>（原版 / 抖火极saas / 口径修正版），口径互不相同',
+        evidence:'该场景用过 2 次，1 次正显著', evLv:'mid' }
+    ]}
+};
+function matchBizTerm(q){
+  var hit = [];
+  for(var k in BIZ_TERMS){ if(q.indexOf(k) > -1) hit.push(k); }
+  return hit;
+}
+
 var ROLE_MAX = { ops:3, algo:3, analyst:2 };
 var ROLE_NAME = { ops:'产运', algo:'算法', analyst:'分析师' };
 function lvNum(lv){ return parseInt(lv.slice(1),10); }
@@ -853,9 +958,10 @@ var elPrev = document.getElementById('preview');
 
 var SUGGEST = [
   { q:'找出生服高潜力但电商低消费的用户', run:function(){
-      S.groups[0].conds.push(mkEnum(ENUMS[0], ['4','5']));
-      S.groups[0].conds.push(mkEnum(ENUMS[1], ['L1','L2']));
-      return '已拆成 1 组条件。「生服高潜力」我理解为<b>生服消费等级 4/5</b>，「电商低消费」为<b>电商消费等级 L1/L2</b>——都是可穷举的枚举属性，语义无歧义，<b>已直接落盘</b>。口径不对可在中栏直接改。';
+      setTimeout(function(){ openMapping(['高潜','低消费']); }, 200);
+      return '这句话里有 <b>2 个业务词需要映射</b>：「高潜」和「低消费」。<br><br>' +
+        '<b>它们在资产库里都不是一个标签</b>——「高潜」有 3 个候选、「低消费」有 2 个，' +
+        '口径和分母各不相同，覆盖规模差数倍。<b>我不替你决定</b>，把判断依据摆出来给你选。';
     }},
   { q:'再加上喜欢露营的人', run:function(){
       var ids = ['interest.outdoor.camping','interest.outdoor.general','llm.intent.camping_purchase'];
@@ -909,6 +1015,9 @@ function condHTML(c, zone){
     h += '<div class="cnote warn">⚠ 开放集条件未确认语义映射，' + c.cands.length + ' 个候选待选择</div>';
   } else if(c.note){
     h += '<div class="cnote warn">⚠ ' + esc(c.note) + '</div>';
+  }
+  if(vis && c.mapFrom){
+    h += '<div class="cnote" style="color:var(--agent)">↳ 由业务词「' + esc(c.mapFrom) + '」映射而来，已确认口径</div>';
   }
   h += '</div><div class="cright">';
   h += '<span class="cnum">' + (vis && c.confirmed ? fmt(c.reach) : '—') + '</span>';
@@ -1016,8 +1125,8 @@ var FILTERS = [['all','全部'],['sub','订阅'],['snap','快照'],['rule','规�
 
 var BANNERS = {
   build:'<span class="bl">工作台想让你点出来的三件事</span>' +
-    '<b>①</b> 标签按二级分类树浏览，<b>取值面板随类型自动切换</b>；兴趣类走<b>值级检索</b>——搜「露营」命中的是字段里的取值，不是标签名。 ' +
-    '<b>②</b> 确认关只拦 Agent 的推断：点第 2 个示例问句会被锁住；自己从分类里挑的直接生效。 ' +
+    '<b>①</b> <b>说一个业务词试试</b>（高消费 / 高潜 / 流失）——Agent 不替你选标签，而是把候选的口径、分母、覆盖、权限、历史证据摆出来，面板里还有「如果只有 NL-to-SQL 会怎样」的对照。 ' +
+    '<b>②</b> 兴趣类走<b>值级检索</b>：搜「露营」命中的是字段里的取值，不是标签名。确认关只拦 Agent 的推断。 ' +
     '<b>③</b> 权限在圈人之前生效——把角色切成"分析师"，L3 标签会当场失效。',
   assets:'<span class="bl">这一屏解决的是"圈完之后"</span>' +
     '<b>①</b> 规则 / 快照 / 订阅是三种东西，不是一种——列表里的徽章就是它们。 ' +
@@ -1581,6 +1690,95 @@ function behaviorPane(){
   return b;
 }
 
+
+/* ===== 语义映射面板：业务语言 → 候选资产 ===== */
+var mapTerms = [], mapIdx = 0, mapSel = {}, mapAfter = null;
+
+function openMapping(terms, after){
+  mapTerms = terms; mapIdx = 0; mapSel = {}; mapAfter = after || null;
+  terms.forEach(function(t){ mapSel[t] = []; });
+  renderMapping();
+}
+function renderMapping(){
+  var term = mapTerms[mapIdx], D = BIZ_TERMS[term];
+  var b = '<div class="mapintro">你说的「<span class="ph">' + esc(term) + '</span>」' +
+    '在资产库里<b>不是一个标签，是 ' + D.cands.length + ' 个候选</b>。' +
+    '它们口径不同、分母不同、覆盖规模差数倍——<b>选错圈出来的就不是同一批人</b>。<br>' +
+    '<b>Agent 不替你决定，只把判断依据摆出来。</b></div>';
+
+  b += '<div class="optlist" style="max-height:340px">' + D.cands.map(function(c, i){
+    var lock = !canSee(c.lv), on = mapSel[term].indexOf(i) > -1;
+    var h = '<button class="cand' + (on?' on':'') + (lock?' locked':'') + '" data-cand="' + i + '"' + (lock?' disabled':'') + '>';
+    h += '<span class="ck2">' + (on?'✓':'') + '</span><div class="cb">';
+    h += '<div class="c1"><span class="cn2">' + c.label + '</span>' +
+         '<span class="clv' + (lvNum(c.lv)>=3?' hi':'') + '">' + c.lv + '</span>' +
+         (lock?'<span class="clv hi">需申请</span>':'') + '</div>';
+    h += '<div class="cid">' + c.tag + '</div>';
+    h += '<div class="candrow"><span class="cl4">口径</span><span class="cv2">' + c.caliber + '</span></div>';
+    h += '<div class="candrow"><span class="cl4">分母</span><span class="cv2">' + c.denom + '</span></div>';
+    if(c.warn) h += '<div class="cwarn' + (c.warn.indexOf('🔴')>-1?' bad':'') + '">' + c.warn + '</div>';
+    h += '</div><div class="cr"><span class="cnum2">' + fmt(c.reach) + '</span>' +
+         '<span class="evb ' + c.evLv + '">' + (c.evLv==='strong'?'强证据':(c.evLv==='mid'?'弱证据':'无证据')) + '</span>' +
+         '</div></button>';
+    return h;
+  }).join('') + '</div>';
+
+  // 已选多个时的重合度提示
+  if(mapSel[term].length > 1){
+    b += '<div class="warnbox"><div class="wl">已选 ' + mapSel[term].length + ' 个</div>' +
+      '组内为 <b>OR</b>。注意这几个候选<b>分母不同</b>，合并后的语义是"满足其中任一"，' +
+      '不等于"消费能力高"这一个概念。</div>';
+  }
+
+  // 对照：只有 NL-to-SQL 会怎样
+  b += '<div class="vsbox"><div class="vt">对照 · 如果只有 NL-to-SQL</div>' +
+    '它会直接生成一条 SQL：' +
+    '<code>WHERE ' + D.cands[0].tag + ' IN (...)</code>' +
+    '<span class="x">✗</span> 它替你选了第一个候选，没告诉你还有 ' + (D.cands.length-1) + ' 个<br>' +
+    '<span class="x">✗</span> 它不知道这几个候选<b>分母不同</b>，覆盖从 ' +
+      fmt(Math.min.apply(null, D.cands.map(function(c){return c.reach;}))) + ' 到 ' +
+      fmt(Math.max.apply(null, D.cands.map(function(c){return c.reach;}))) + ' 不等<br>' +
+    '<span class="x">✗</span> 它不知道你有没有 L3 权限，跑的时候才失败<br>' +
+    '<span class="x">✗</span> 它不知道哪个候选<b>历史上被验证过</b></div>';
+
+  var can = mapSel[term].length > 0;
+  var last = mapIdx === mapTerms.length - 1;
+  var foot = '<span class="fnote">业务词 ' + (mapIdx+1) + ' / ' + mapTerms.length + '</span>' +
+    (mapIdx > 0 ? '<button class="btn sec" data-mapback="1">上一个</button>' : '') +
+    '<button class="btn sec" data-close="1">取消</button>' +
+    '<button class="btn pri" id="mapok"' + (can?'':' disabled') + '>' +
+      (last ? '确认映射并生成条件' : '下一个业务词') + '</button>';
+  openModal('语义映射确认', '「' + term + '」→ 资产', b, foot);
+}
+function commitMapping(){
+  var added = [];
+  mapTerms.forEach(function(term){
+    var D = BIZ_TERMS[term];
+    mapSel[term].forEach(function(i){
+      var c = D.cands[i];
+      var tg = ENUMS.filter(function(x){ return x.id === c.tag; })[0];
+      var cond;
+      if(tg){
+        cond = mkEnum(tg, c.vals.filter(function(v){
+          return tg.vals.some(function(tv){ return tv[0] === v; }); }));
+        if(!cond.reach){ cond.reach = c.reach; cond.text = c.label; }
+      } else {
+        cond = { id:nid(), type:'enum', src:c.tag, name:c.label, ns:'cross', lv:c.lv,
+                 text:c.label, reach:c.reach, confirmed:true, note:'' };
+      }
+      cond.note = c.warn ? c.warn.replace(/<[^>]+>/g,'') : '';
+      cond.mapFrom = term;
+      S.groups[0].conds.push(cond);
+      added.push(c.label);
+    });
+  });
+  closeModal();
+  say('a', '已按你的选择生成条件：<b>' + added.join('、') + '</b>。<br><br>' +
+    '<b>注意这一步和 NL-to-SQL 的区别</b>：它会直接替你选一个然后生成 SQL；' +
+    '这里是你自己在看过口径、分母、覆盖规模和历史证据之后做的决定——<b>选错的责任和依据都是可追溯的</b>。');
+  render();
+}
+
 /* ---- 确认映射 ---- */
 var confirmId = null, confirmSel = [];
 function openConfirm(cid){
@@ -1781,6 +1979,17 @@ document.addEventListener('click', function(e){
   }
 
   /* picker */
+  if(d.cand !== undefined){
+    var tm = mapTerms[mapIdx], ix = +d.cand, arr = mapSel[tm];
+    var p = arr.indexOf(ix); if(p>-1) arr.splice(p,1); else arr.push(ix);
+    renderMapping(); return;
+  }
+  if(d.mapback){ mapIdx--; renderMapping(); return; }
+  if(t.id === 'mapok'){
+    if(mapIdx < mapTerms.length - 1){ mapIdx++; renderMapping(); }
+    else commitMapping();
+    return;
+  }
   if(d.tab){ pickTab = d.tab; pickState.sel = null; renderPicker(); return; }
   if(d.c1 !== undefined){
     if(d.c2){ pickState.c1 = d.c1; pickState.c2 = d.c2; }
@@ -1952,6 +2161,18 @@ function handleQuery(){
   say('a', '<span class="thinking">正在拆解条件…</span>');
   setTimeout(function(){
     S.msgs.pop();
+
+    // 优先：识别业务词 → 走语义映射面板，不替用户决定
+    var bt = matchBizTerm(q);
+    if(bt.length){
+      say('a', '识别到 <b>' + bt.length + ' 个业务词</b>：' +
+        bt.map(function(x){ return '「' + esc(x) + '」'; }).join('、') +
+        '。<br><br>这些词在资产库里<b>各自对应多个候选标签</b>，口径与分母不同。' +
+        '<b>我不替你选</b>——把每个候选的口径、分母、覆盖规模、权限和历史证据摆出来，你来定。');
+      setTimeout(function(){ openMapping(bt); }, 260);
+      return;
+    }
+
     var hits = [], reply = [];
 
     ENUMS.forEach(function(t){
