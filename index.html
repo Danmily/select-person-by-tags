@@ -579,28 +579,28 @@ var ENUMS = [
 ];
 
 var INTERESTS = [
-  { id:'interest.outdoor.camping', name:'户外露营', cat:['兴趣与意图','泛化兴趣'], reach:12400000, lv:'L2', ns:'ecom',
+  { id:'interest.outdoor.camping', name:'户外露营', field:'life_user_interest_info', vals:['露营装备', '户外露营', '野餐地图'], cat:['兴趣与意图','泛化兴趣'], reach:12400000, lv:'L2', ns:'ecom',
     src:'电商行为 + LLM 推理', freq:'日更', acc:null, kw:['露营','户外','帐篷','野营'],
     desc:'近 90 天有露营相关商品浏览 / 购买，或露营内容消费行为' },
-  { id:'interest.outdoor.general', name:'户外运动', cat:['兴趣与意图','泛化兴趣'], reach:38900000, lv:'L1', ns:'ecom',
+  { id:'interest.outdoor.general', name:'户外运动', field:'ecom_user_interest_info', vals:['户外运动', '徒步', '骑行', '钓鱼'], cat:['兴趣与意图','泛化兴趣'], reach:38900000, lv:'L1', ns:'ecom',
     src:'电商行为', freq:'日更', acc:null, kw:['露营','户外','运动','徒步','骑行'],
     desc:'户外运动大类兴趣，覆盖露营 / 徒步 / 骑行 / 钓鱼等子类（范围明显更宽）' },
-  { id:'llm.intent.camping_purchase', name:'露营装备购买意图', cat:['兴趣与意图','LLM 语义意图'], reach:4200000, lv:'L3', ns:'cross',
+  { id:'llm.intent.camping_purchase', name:'露营装备购买意图', field:'user_preference_info', vals:['露营装备购买意图'], cat:['兴趣与意图','LLM 语义意图'], reach:4200000, lv:'L3', ns:'cross',
     src:'LLM 推理 · 全域序列', freq:'周更', acc:'抽检准确率 87%', kw:['露营','户外','购买','意图','装备'],
     desc:'基于全域行为序列由大模型推断的短期购买意图，时效性强但覆盖窄' },
-  { id:'interest.food.hotpot', name:'火锅偏好', cat:['兴趣与意图','泛化兴趣'], reach:28700000, lv:'L2', ns:'local',
+  { id:'interest.food.hotpot', name:'火锅偏好', field:'life_user_interest_info', vals:['火锅', '蒲烧鳗鱼', '川渝火锅'], cat:['兴趣与意图','泛化兴趣'], reach:28700000, lv:'L2', ns:'local',
     src:'生服行为', freq:'日更', acc:null, kw:['火锅','餐饮','到店','美食'],
     desc:'近 90 天火锅品类团购浏览 / 下单 / 核销行为' },
-  { id:'interest.parenting.baking', name:'亲子烘焙', cat:['兴趣与意图','泛化兴趣'], reach:6800000, lv:'L2', ns:'ecom',
+  { id:'interest.parenting.baking', name:'亲子烘焙', field:'ecom_user_interest_info', vals:['亲子烘焙', '烘焙器具'], cat:['兴趣与意图','泛化兴趣'], reach:6800000, lv:'L2', ns:'ecom',
     src:'电商行为 + 内容消费', freq:'日更', acc:null, kw:['亲子','烘焙','母婴','烘培'],
     desc:'亲子类烘焙器具与课程的兴趣人群' },
-  { id:'llm.intent.travel_nonlocal', name:'异地出行意图', cat:['兴趣与意图','LLM 语义意图'], reach:15600000, lv:'L3', ns:'cross',
+  { id:'llm.intent.travel_nonlocal', name:'异地出行意图', field:'geo_user_interest_info', vals:['异地出行意图', '伦敦旅游攻略', '嵊泗列岛'], cat:['兴趣与意图','LLM 语义意图'], reach:15600000, lv:'L3', ns:'cross',
     src:'LLM 推理 · 全域序列', freq:'日更', acc:'抽检准确率 85%', kw:['出行','异地','旅游','travel','旅行'],
     desc:'跨域识别的短期异地出行意图，已在用增视频召回验证过正向' },
-  { id:'interest.beauty.skincare', name:'护肤兴趣', cat:['兴趣与意图','泛化兴趣'], reach:51200000, lv:'L1', ns:'ecom',
+  { id:'interest.beauty.skincare', name:'护肤兴趣', field:'ecom_user_interest_info', vals:['护肤', '面膜', '精华'], cat:['兴趣与意图','泛化兴趣'], reach:51200000, lv:'L1', ns:'ecom',
     src:'电商行为', freq:'日更', acc:null, kw:['护肤','美妆','面膜','beauty'],
     desc:'护肤品类兴趣人群' },
-  { id:'llm.summary.shop_intent', name:'进店意图', cat:['兴趣与意图','LLM 语义意图'], reach:9400000, lv:'L3', ns:'local',
+  { id:'llm.summary.shop_intent', name:'进店意图', field:'user_preference_info', vals:['进店意图'], cat:['兴趣与意图','LLM 语义意图'], reach:9400000, lv:'L3', ns:'local',
     src:'LLM 推理', freq:'日更', acc:'抽检准确率 82%', kw:['进店','到店','门店','意图'],
     desc:'⚠ 该标签历史实验中出现过「GMV 正向但店铺主访负向」的指标冲突' }
 ];
@@ -1016,7 +1016,7 @@ var FILTERS = [['all','全部'],['sub','订阅'],['snap','快照'],['rule','规�
 
 var BANNERS = {
   build:'<span class="bl">工作台想让你点出来的三件事</span>' +
-    '<b>①</b> 标签按二级分类树浏览，<b>选中后取值面板随标签类型自动切换</b>——枚举给多选＋人数分布，兴趣给相近标签＋重合度。 ' +
+    '<b>①</b> 标签按二级分类树浏览，<b>取值面板随类型自动切换</b>；兴趣类走<b>值级检索</b>——搜「露营」命中的是字段里的取值，不是标签名。 ' +
     '<b>②</b> 确认关只拦 Agent 的推断：点第 2 个示例问句会被锁住；自己从分类里挑的直接生效。 ' +
     '<b>③</b> 权限在圈人之前生效——把角色切成"分析师"，L3 标签会当场失效。',
   assets:'<span class="bl">这一屏解决的是"圈完之后"</span>' +
@@ -1463,10 +1463,17 @@ function browsePane(){
     if(pickState.c2 && x.t.cat[1] !== pickState.c2) return false;
     if(!q) return true;
     var t = x.t;
-    return t.name.indexOf(q)>-1 || (t.desc||'').indexOf(q)>-1 || t.id.indexOf(q)>-1 ||
-           (t.kw||[]).some(function(k){ return k.indexOf(q)>-1 || q.indexOf(k)>-1; });
+    if(t.name.indexOf(q)>-1 || (t.desc||'').indexOf(q)>-1 || t.id.indexOf(q)>-1) return true;
+    if((t.kw||[]).some(function(k){ return k.indexOf(q)>-1 || q.indexOf(k)>-1; })) return true;
+    // 值级检索：资产里没有叫「露营」的标签，用户搜的是字段里的取值
+    return (t.vals||[]).some(function(v){ return v.indexOf(q)>-1 || q.indexOf(v)>-1; });
   });
 
+  if(q){
+    h += '<div class="tabnote" style="margin-bottom:.2rem"><b>值级检索：</b>' +
+      '资产里并没有叫「' + esc(q) + '」的标签——兴趣类字段是<b>数组存储</b>，' +
+      '你搜的是<b>字段里的取值</b>。命中结果展示为「字段 ＋ 具体取值」。</div>';
+  }
   h += '<div class="crumb">' +
        (pickState.c1 ? '<b>' + esc(pickState.c1) + '</b>' : '全部分类') +
        (pickState.c2 ? ' › <b>' + esc(pickState.c2) + '</b>' : '') +
@@ -1481,13 +1488,17 @@ function browsePane(){
       var t = x.t, lock = !canSee(t.lv);
       var meta = x.k === 'enum'
         ? [t.id, t.vals.length + ' 个取值']
-        : [t.src, t.freq].concat(t.acc?[t.acc]:[]);
+        : [t.field ? '字段 ' + t.field : t.src, t.freq].concat(t.acc?[t.acc]:[]);
+      var hit = (x.k === 'interest' && q && t.vals)
+        ? t.vals.filter(function(v){ return v.indexOf(q)>-1 || q.indexOf(v)>-1; }) : [];
       return '<button class="opt' + (lock?' locked':'') + '" data-ptag="' + t.id + '"' + (lock?' disabled':'') + '>' +
         '<div class="ob"><div class="on1"><span class="onm">' + t.name + '</span>' +
         '<span class="ctype ' + x.k + '">' + (x.k==='enum'?'枚举':'兴趣') + '</span>' +
         '<span class="clv' + (lvNum(t.lv)>=3?' hi':'') + '">' + t.lv + '</span>' +
         (lock?'<span class="clv hi">需申请</span>':'') + '</div>' +
         '<div class="od">' + t.desc + '</div>' +
+        (hit.length ? '<div class="od" style="color:var(--agent);font-weight:600">↳ 命中取值：' +
+           hit.map(function(v){ return '「' + esc(v) + '」'; }).join(' ') + '</div>' : '') +
         '<div class="om">' + meta.map(function(m){ return '<span>' + m + '</span>'; }).join('') + '</div></div>' +
         (x.k==='interest' ? '<span class="cnt">' + fmt(t.reach) + '</span>' : '') +
         '</button>';
