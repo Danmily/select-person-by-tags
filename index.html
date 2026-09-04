@@ -182,12 +182,13 @@ select.role{background:var(--surface);border:1px solid var(--rule);border-radius
 .modal{background:var(--surface);border:1px solid var(--rule);border-radius:8px;
   box-shadow:0 24px 60px -20px rgba(0,0,0,.5);width:min(760px,100%);max-height:88vh;
   display:flex;flex-direction:column;overflow:hidden;}
-.mhead{padding:.8rem 1rem .7rem;border-bottom:1px solid var(--rule);display:flex;
+.mhead{flex:none;padding:.8rem 1rem .7rem;border-bottom:1px solid var(--rule);display:flex;
   justify-content:space-between;align-items:baseline;gap:.6rem;}
 .mhead h2{margin:0;font-family:var(--fd);font-size:1rem;font-weight:800;}
 .mhead .ms{font-size:.72rem;color:var(--ink-3);}
-.mbody{padding:.85rem 1rem;overflow-y:auto;display:flex;flex-direction:column;gap:.7rem;}
-.mfoot{padding:.7rem 1rem;border-top:1px solid var(--rule);display:flex;gap:.5rem;
+.mbody{padding:.85rem 1rem;overflow-y:auto;display:flex;flex-direction:column;gap:.7rem;
+  flex:1 1 auto;min-height:0;}
+.mfoot{flex:none;padding:.7rem 1rem;border-top:1px solid var(--rule);display:flex;gap:.5rem;
   justify-content:flex-end;align-items:center;background:var(--surface-2);flex-wrap:wrap;}
 .mfoot .fnote{margin-right:auto;font-size:.7rem;color:var(--ink-3);}
 .btn{border-radius:5px;padding:.42rem .85rem;font-weight:700;font-size:.8rem;}
@@ -462,6 +463,16 @@ code{font-family:var(--fm);font-size:.92em;background:var(--surface-2);padding:.
 .roleline .rd{color:var(--ink);}
 .roleline .rt{font-family:var(--fm);font-size:.62rem;color:var(--ink-3);margin-top:.12rem;}
 .roleline.gapline{background:var(--agent-soft);}
+
+
+.modal.wide{width:min(1080px,100%);}
+.stg2col{display:grid;grid-template-columns:minmax(0,1fr);gap:.6rem;}
+@media(min-width:820px){.stg2col{grid-template-columns:repeat(2,minmax(0,1fr));}}
+.stgblock{display:flex;flex-direction:column;gap:.35rem;}
+.stgblock .sect{margin-bottom:0;}
+.rolebox{background:var(--surface);border-radius:5px;overflow:hidden;}
+.rolebox.pot{border:1px solid var(--agent);}
+.rolebox.rdy{border:1px solid var(--rule);}
 
 .toast{position:fixed;left:50%;bottom:1.4rem;transform:translateX(-50%);z-index:80;
   background:var(--ink);color:var(--paper);border-radius:6px;padding:.55rem .95rem;
@@ -1616,7 +1627,8 @@ function doConfirmAct(key){
 
 /* ============ 弹窗 ============ */
 var mask = document.getElementById('mask');
-function openModal(title, sub, body, foot){
+function openModal(title, sub, body, foot, wide){
+  document.querySelector('.modal').classList.toggle('wide', !!wide);
   document.getElementById('mtitle').textContent = title;
   document.getElementById('msub').textContent = sub || '';
   document.getElementById('mbody').innerHTML = body;
@@ -1956,26 +1968,26 @@ function renderStrategy(){
       ' 这一行直接给出四段式各角色该用哪个字段——<b>这一步是查表，不是模型推理</b>。' +
       (picked.length>1 ? '<br><br><b>你选了两个子类型，下面是两套独立策略，会产出两个人群。</b>' : '') + '</div>';
 
-    picked.forEach(function(P){
+    b += '<div class="stg2col">' + picked.map(function(P){
       var key = P[0], title = P[1], R = P[2], action = P[3];
-      b += '<div class="sect" style="margin-top:.6rem">' + title + '</div>';
-      b += '<div style="background:var(--surface);border:1px solid ' +
-           (key==='potential'?'var(--agent)':'var(--rule)') + ';border-radius:5px;overflow:hidden">';
+      var h = '<div class="stgblock"><div class="sect">' + title + '</div>';
+      h += '<div class="rolebox ' + (key==='potential'?'pot':'rdy') + '">';
       var seq = (key==='potential')
         ? [['qualify','资格'],['gap','缺口 ★'],['reach','可触达'],['exclude','排除']]
         : [['qualify','资格'],['same','同向 ⚠'],['reach','可触达'],['exclude','排除']];
       seq.forEach(function(x){
         var k = x[0], r = R[k]; if(!r) return;
-        b += '<div class="roleline' + (k==='gap'?' gapline':'') + '">' +
+        h += '<div class="roleline' + (k==='gap'?' gapline':'') + '">' +
           '<span class="rk ' + (k==='same'?'qualify':k) + '">' + x[1] + '</span>' +
           '<span class="rd">' + r.desc +
             '<div class="rt">' + (r.tag || ('行为：' + r.behavior.ev + ' · 近' + r.behavior.w + '天')) + '</div></span>' +
           '<span></span></div>';
       });
-      b += '</div>';
-      b += '<div class="' + (key==='potential'?'contract':'warnbox') + '" style="margin-top:.35rem">' +
+      h += '</div>';
+      h += '<div class="' + (key==='potential'?'contract':'warnbox') + '">' +
         '<div class="' + (key==='potential'?'cl2':'wl') + '">下游动作建议</div>' + action + '</div>';
-    });
+      return h + '</div>';
+    }).join('') + '</div>';
 
     if(picked.length > 1){
       b += '<div class="warnbox" style="background:var(--risk-soft);border-color:var(--risk)">' +
@@ -2010,7 +2022,8 @@ function renderStrategy(){
   }
 
   openModal('策略决策 · 业务目标转圈人条件',
-    stgStep===1?'第一层 · 目标解析':(stgStep===2?'第二层 · 场景与约束拆解':'第三层 · 人群策略'), b, foot);
+    stgStep===1?'第一层 · 目标解析':(stgStep===2?'第二层 · 场景与约束拆解':'第三层 · 人群策略'),
+    b, foot, stgStep===3);
 }
 
 function buildConds(R, keys, roleLabel){
