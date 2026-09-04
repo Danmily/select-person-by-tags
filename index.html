@@ -474,6 +474,18 @@ code{font-family:var(--fm);font-size:.92em;background:var(--surface-2);padding:.
 .rolebox.pot{border:1px solid var(--agent);}
 .rolebox.rdy{border:1px solid var(--rule);}
 
+
+.structrow{display:flex;gap:.28rem;flex-wrap:wrap;margin-top:.28rem;}
+.sbadge{font-family:var(--fm);font-size:.58rem;font-weight:600;padding:.1rem .32rem;
+  border-radius:3px;border:1px solid var(--rule);color:var(--ink-3);background:var(--surface-2);}
+.sbadge.dom{border-color:var(--agent);color:var(--agent);background:var(--agent-soft);}
+.sbadge.cat{border-color:var(--gov);color:var(--gov);background:var(--gov-soft);}
+.sbadge.win{border-color:var(--ink-3);}
+.sbadge.bor{border-color:var(--risk);color:var(--risk);background:var(--risk-soft);font-weight:700;}
+.sbadge.pol-neg{border-color:var(--risk);color:var(--risk);}
+.sbadge.pol-pos{border-color:var(--ok);color:var(--ok);}
+.rk.preference{background:var(--ok-soft);color:var(--ok);}
+
 .toast{position:fixed;left:50%;bottom:1.4rem;transform:translateX(-50%);z-index:80;
   background:var(--ink);color:var(--paper);border-radius:6px;padding:.55rem .95rem;
   font-size:.79rem;line-height:1.55;box-shadow:0 12px 32px -12px rgba(0,0,0,.55);
@@ -891,73 +903,120 @@ function matchBizTerm(q){
 }
 
 
-/* ===== 策略决策规则（R1 映射表 + 场景判定） ===== */
+/* ===== 策略决策规则（R1 映射表 + 场景判定） =====
+   两根轴：角色轴（为什么存在：能力/偏好/缺口/触达/风险）
+           结构轴（怎么执行：domain 域 / category 品类 / window 时间窗 / polarity 极性）
+   每条角色数据里显式带 domain/category/window，供第三步渲染结构轴徽章 */
 var SCENES = {
   new_growth: {
     name:'新客增量', lever:'触达人数', gapType:'有能力，无该域行为',
     metrics:['订单量','GMV','MAC'],
     roles:{
-      qualify:{ desc:'源域（电商）消费等级 ≥ L3', tag:'trade.ecom.consume_level', vals:['L3','L4','L5'] },
-      gap:    { desc:'目标域（生服）无交易记录', tag:'trade.local.is_new', vals:['未核销'] },
-      reach:  { desc:'电商侧近 30 天活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
-      exclude:{ desc:'近 30 天已被生服内容触达', behavior:{ ev:'local.verify', w:30, t:1, mod:'none' } }
+      ability:{ desc:'源域（电商）消费等级 ≥ L3', tag:'trade.ecom.consume_level', vals:['L3','L4','L5'],
+                domain:'ecom', category:null, window:null, borrowed:true },
+      preference:{ desc:'电商侧对该品类有兴趣信号', tag:'trade.ecom.cat1_pref', vals:['服饰','美妆个护'],
+                domain:'ecom', category:'跨品类', window:null },
+      gap:    { desc:'目标域（生服）无交易记录', tag:'trade.local.is_new', vals:['未核销'],
+                domain:'local', category:null, window:{v:'全量',unit:''} },
+      reach:  { desc:'电商侧近 30 天活跃', tag:'trade.ecom.activity', vals:['高活','中活'],
+                domain:'ecom', category:null, window:{v:30,unit:'天'} },
+      exclude:{ desc:'近 30 天已被生服内容触达', behavior:{ ev:'local.verify', w:30, t:1, mod:'none' },
+                domain:'local', window:{v:30,unit:'天'} }
     },
     readyRoles:{
-      qualify:{ desc:'源域（电商）消费等级 ≥ L4', tag:'trade.ecom.consume_level', vals:['L4','L5'] },
-      same:   { desc:'目标域（生服）也已是成熟老客', tag:'trade.local.is_new', vals:['成熟老客'] },
-      reach:  { desc:'两侧均活跃', tag:'trade.ecom.activity', vals:['高活'] },
-      exclude:{ desc:'近 7 天已被触达', behavior:{ ev:'local.verify', w:7, t:1, mod:'none' } }
+      ability:{ desc:'源域（电商）消费等级 ≥ L4', tag:'trade.ecom.consume_level', vals:['L4','L5'], domain:'ecom' },
+      same:   { desc:'目标域（生服）也已是成熟老客', tag:'trade.local.is_new', vals:['成熟老客'], domain:'local' },
+      reach:  { desc:'两侧均活跃', tag:'trade.ecom.activity', vals:['高活'], domain:'ecom', window:{v:30,unit:'天'} },
+      exclude:{ desc:'近 7 天已被触达', behavior:{ ev:'local.verify', w:7, t:1, mod:'none' }, domain:'local', window:{v:7,unit:'天'} }
     },
     readyAction:'跨域 VIP 权益维系（两域都已高价值，重点是别流失）' },
+  dining_new: {
+    name:'到店餐饮拉新', lever:'触达人数', gapType:'有能力，无该域行为（本域无数据，需跨域借）',
+    metrics:['订单量'],
+    roles:{
+      ability:{ desc:'电商消费等级 ≥ L3（生服该用户无消费记录，能力判断只能从电商借）',
+                tag:'trade.ecom.consume_level', vals:['L3','L4','L5'],
+                domain:'ecom', category:null, window:null, borrowed:true },
+      preference:{ desc:'住所/职场周边常驻商圈为核心/社区商圈（周边有餐饮供给，客观地理信号，不依赖消费历史）',
+                tag:'trade.common.biz_circle', vals:['核心商圈','社区商圈'],
+                domain:'local', category:'到店餐饮', window:null, borrowed:true },
+      gap:    { desc:'生服到店餐饮历史订单 = 0（从未核销过）',
+                tag:'trade.local.is_new', vals:['未核销'],
+                domain:'local', category:'到店餐饮', window:{v:'全量',unit:''} },
+      reach:  { desc:'近 30 天 App 活跃', tag:'trade.ecom.activity', vals:['高活','中活'],
+                domain:'ecom', category:null, window:{v:30,unit:'天'} },
+      exclude:{ desc:'近 30 天已被生服内容触达', behavior:{ ev:'local.verify', w:30, t:1, mod:'none' },
+                domain:'local', window:{v:30,unit:'天'} }
+    }
+  },
   freq_up: {
     name:'老客频次提升', lever:'复购频次', gapType:'在买，但频次低于潜力',
     metrics:['订单量','复购率'],
     roles:{
-      qualify:{ desc:'生服已是成长期/成熟老客', tag:'trade.local.is_new', vals:['成长期','成熟老客'] },
-      gap:    { desc:'生服近期活跃度掉到低活/沉默', tag:'trade.local.activity', vals:['低活','沉默'] },
-      reach:  { desc:'电商侧仍然活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
-      exclude:{ desc:'近 30 天已核销过', behavior:{ ev:'local.verify', w:30, t:1, mod:'none' } }
+      ability:{ desc:'生服已是成长期/成熟老客', tag:'trade.local.is_new', vals:['成长期','成熟老客'],
+                domain:'local', category:null, window:{v:'全量',unit:''} },
+      preference:{ desc:'历史到店品类偏好稳定', tag:'trade.local.cat1_pref', vals:['到店餐饮'],
+                domain:'local', category:'到店餐饮', window:null },
+      gap:    { desc:'生服近期活跃度掉到低活/沉默', tag:'trade.local.activity', vals:['低活','沉默'],
+                domain:'local', category:null, window:{v:30,unit:'天'} },
+      reach:  { desc:'电商侧仍然活跃', tag:'trade.ecom.activity', vals:['高活','中活'],
+                domain:'ecom', category:null, window:{v:30,unit:'天'} },
+      exclude:{ desc:'近 30 天已核销过', behavior:{ ev:'local.verify', w:30, t:1, mod:'none' },
+                domain:'local', window:{v:30,unit:'天'} }
     },
     readyRoles:{
-      qualify:{ desc:'生服已是成熟老客', tag:'trade.local.is_new', vals:['成熟老客'] },
-      same:   { desc:'且生服活跃度本来就高', tag:'trade.local.activity', vals:['高活'] },
-      reach:  { desc:'电商侧也活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
-      exclude:{ desc:'近 7 天已被触达', behavior:{ ev:'local.verify', w:7, t:1, mod:'none' } }
+      ability:{ desc:'生服已是成熟老客', tag:'trade.local.is_new', vals:['成熟老客'], domain:'local' },
+      same:   { desc:'且生服活跃度本来就高', tag:'trade.local.activity', vals:['高活'], domain:'local', window:{v:30,unit:'天'} },
+      reach:  { desc:'电商侧也活跃', tag:'trade.ecom.activity', vals:['高活','中活'], domain:'ecom', window:{v:30,unit:'天'} },
+      exclude:{ desc:'近 7 天已被触达', behavior:{ ev:'local.verify', w:7, t:1, mod:'none' }, domain:'local', window:{v:7,unit:'天'} }
     },
     readyAction:'高频老客权益维系 / 会员升级（不发券，发了是浪费）' },
   awaken: {
     name:'沉睡用户唤醒', lever:'复购唤回', gapType:'转化过，但流失了',
     metrics:['订单量','MAC'],
     roles:{
-      qualify:{ desc:'历史有生服转化', tag:'trade.local.is_new', vals:['成熟老客'] },
-      gap:    { desc:'流失倾向高风险', tag:'trade.cross.churn_risk', vals:['高风险'] },
-      reach:  { desc:'电商侧仍然活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
-      exclude:{ desc:'近 30 天已被唤醒触达', behavior:{ ev:'local.verify', w:30, t:1, mod:'none' } }
+      ability:{ desc:'历史有生服转化', tag:'trade.local.is_new', vals:['成熟老客'],
+                domain:'local', category:null, window:{v:'全量',unit:''} },
+      preference:{ desc:'历史核销品类仍在售卖范围内', tag:'trade.local.cat1_pref', vals:['到店餐饮','休闲娱乐'],
+                domain:'local', category:'跨品类', window:null },
+      gap:    { desc:'流失倾向高风险', tag:'trade.cross.churn_risk', vals:['高风险'],
+                domain:'cross', category:null, window:{v:30,unit:'天'} },
+      reach:  { desc:'电商侧仍然活跃', tag:'trade.ecom.activity', vals:['高活','中活'],
+                domain:'ecom', category:null, window:{v:30,unit:'天'} },
+      exclude:{ desc:'近 30 天已被唤醒触达', behavior:{ ev:'local.verify', w:30, t:1, mod:'none' },
+                domain:'local', window:{v:30,unit:'天'} }
     },
     readyRoles:{
-      qualify:{ desc:'生服成熟老客', tag:'trade.local.is_new', vals:['成熟老客'] },
-      same:   { desc:'且流失风险低（本来就稳）', tag:'trade.cross.churn_risk', vals:['低风险','稳定'] },
-      reach:  { desc:'电商侧活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
-      exclude:{ desc:'近 7 天已被触达', behavior:{ ev:'local.verify', w:7, t:1, mod:'none' } }
+      ability:{ desc:'生服成熟老客', tag:'trade.local.is_new', vals:['成熟老客'], domain:'local' },
+      same:   { desc:'且流失风险低（本来就稳）', tag:'trade.cross.churn_risk', vals:['低风险','稳定'], domain:'cross', window:{v:30,unit:'天'} },
+      reach:  { desc:'电商侧活跃', tag:'trade.ecom.activity', vals:['高活','中活'], domain:'ecom', window:{v:30,unit:'天'} },
+      exclude:{ desc:'近 7 天已被触达', behavior:{ ev:'local.verify', w:7, t:1, mod:'none' }, domain:'local', window:{v:7,unit:'天'} }
     },
     readyAction:'稳定客群维系，作为对照基准人群' },
   value_up: {
     name:'单客价值提升', lever:'客单价', gapType:'在买，但买得比潜力便宜',
     metrics:['GMV','客单价'],
     roles:{
-      qualify:{ desc:'电商消费等级高（有能力）', tag:'trade.ecom.consume_level', vals:['L4','L5'] },
-      gap:    { desc:'但客单价档位偏低', tag:'trade.ecom.aov_band', vals:['0–50','50–150'] },
-      reach:  { desc:'近 30 天活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
-      exclude:{ desc:'近 30 天已转化', behavior:{ ev:'ecom.order', w:30, t:1, mod:'none' } }
+      ability:{ desc:'电商消费等级高（有能力）', tag:'trade.ecom.consume_level', vals:['L4','L5'],
+                domain:'ecom', category:null, window:null },
+      preference:{ desc:'品牌等级偏好为国内头部及以上', tag:'trade.ecom.brand_tier', vals:['国际大牌','国内头部'],
+                domain:'ecom', category:'品牌', window:null },
+      gap:    { desc:'但客单价档位偏低', tag:'trade.ecom.aov_band', vals:['0–50','50–150'],
+                domain:'ecom', category:null, window:{v:180,unit:'天'} },
+      reach:  { desc:'近 30 天活跃', tag:'trade.ecom.activity', vals:['高活','中活'],
+                domain:'ecom', category:null, window:{v:30,unit:'天'} },
+      exclude:{ desc:'近 30 天已转化', behavior:{ ev:'ecom.order', w:30, t:1, mod:'none' },
+                domain:'ecom', window:{v:30,unit:'天'} }
     },
     readyRoles:{
-      qualify:{ desc:'电商消费等级 L4/L5', tag:'trade.ecom.consume_level', vals:['L4','L5'] },
-      same:   { desc:'且客单价档位本来就高', tag:'trade.ecom.aov_band', vals:['150–500','500+'] },
-      reach:  { desc:'近 30 天活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
-      exclude:{ desc:'近 7 天已转化', behavior:{ ev:'ecom.order', w:7, t:1, mod:'none' } }
+      ability:{ desc:'电商消费等级 L4/L5', tag:'trade.ecom.consume_level', vals:['L4','L5'], domain:'ecom' },
+      same:   { desc:'且客单价档位本来就高', tag:'trade.ecom.aov_band', vals:['150–500','500+'], domain:'ecom', window:{v:180,unit:'天'} },
+      reach:  { desc:'近 30 天活跃', tag:'trade.ecom.activity', vals:['高活','中活'], domain:'ecom', window:{v:30,unit:'天'} },
+      exclude:{ desc:'近 7 天已转化', behavior:{ ev:'ecom.order', w:7, t:1, mod:'none' }, domain:'ecom', window:{v:7,unit:'天'} }
     },
     readyAction:'高客单人群维系 / 高端货盘优先承接' }
 };
+var DOMAIN_NAME = { ecom:'电商', local:'生服', cross:'跨域', common:'通用' };
 
 var GOAL_CASES = [
   { q:'在生服用增场景提升订单量',
@@ -968,6 +1027,14 @@ var GOAL_CASES = [
     evidence:{
       new_growth:{ lv:'中', text:'同类破圈场景有对照组但未达显著（+0.5% 量级）' },
       freq_up:{ lv:'强', text:'视频推荐 · 生服人均订单 +1.4012%（有 AB 对照，显著）' }
+    }},
+  { q:'生服 Q4 要提升到店餐饮的订单量',
+    parsed:{ metric:'订单量', direction:'提升', domain:['生服'], category:'到店餐饮',
+             window:{ v:'Q4（10–12月）', src:'user_specified' }, intent:'投放', scale:'—' },
+    matched:['dining_new'],
+    crossDomain:true,
+    evidence:{
+      dining_new:{ lv:'弱', text:'仅历史上有类似跨域破圈的前后对比（无对照组），不作强背书' }
     }}
 ];
 
@@ -1090,18 +1157,65 @@ var elPrev = document.getElementById('preview');
 var SUGGEST = [
   { q:'🎯 我想在生服用增场景提升订单量', run:function(){
       setTimeout(function(){ openStrategy(0); }, 200);
-      return '这是一句<b>纯业务目标</b>——里面<b>一个圈人条件都没有</b>，' +
-        '没法直接翻译成 SQL。<br><br>要先走三层决策：' +
+      return intentBadge('goal') + ' &nbsp;检测到指标动词「提升」＋量化指标「订单量」，没有具体用户画像。' +
+        '<br><br>这句话里<b>一个圈人条件都没有</b>，没法直接翻译成 SQL。要先走三层决策：' +
         '<b>① 目标解析</b>（拆出指标/方向/域/约束）→ ' +
         '<b>② 场景判定</b>（这个指标该走哪个杠杆）→ ' +
-        '<b>③ 策略生成</b>（查 R1 表得出四段式条件）。<br><br>' +
+        '<b>③ 策略生成</b>（查 R1 表得出五段式条件：能力/偏好/缺口/触达/排除）。<br><br>' +
         '这一层才是「业务目标 → 维度 → 标签」真正发生的地方。';
+    }},
+  { q:'🎯 生服 Q4 要提升到店餐饮的订单量', run:function(){
+      setTimeout(function(){ openStrategy(1); }, 200);
+      return intentBadge('goal') + ' &nbsp;同样是目标型，但这次品类=到店餐饮，且<b>生服侧对该用户完全没有消费记录</b>。' +
+        '<br><br>看下一步「能力」「偏好」两个角色会怎么处理——<b>目标域没数据，只能跨域借</b>。';
     }},
   { q:'找出生服高潜力但电商低消费的用户', run:function(){
       setTimeout(function(){ openMapping(['高潜','低消费']); }, 200);
-      return '这句话里有 <b>2 个业务词需要映射</b>：「高潜」和「低消费」。<br><br>' +
+      return intentBadge('descriptive') + ' &nbsp;没有指标动词，两个都是具体人群描述词——用户已经想清楚要谁了。' +
+        '<br><br>这句话里有 <b>2 个业务词需要映射</b>：「高潜」和「低消费」。' +
         '<b>它们在资产库里都不是一个标签</b>——「高潜」有 3 个候选、「低消费」有 2 个，' +
         '口径和分母各不相同，覆盖规模差数倍。<b>我不替你决定</b>，把判断依据摆出来给你选。';
+    }},
+  { q:'喜欢露营但还没买过装备的一二线用户', run:function(){
+      setTimeout(function(){
+        var ct = ENUMS.filter(function(x){ return x.id==='trade.common.city_tier'; })[0];
+        S.groups[0].conds.push(mkEnum(ct, ['一线','新一线']));
+        var ids = ['interest.outdoor.camping','interest.outdoor.general','llm.intent.camping_purchase'];
+        var c = mkInterest(ids, []);
+        c.text = ids.map(function(id){ return INTERESTS.filter(function(x){ return x.id===id; })[0].name; }).join(' / ') + '（3 个候选待确认）';
+        S.groups[0].conds.push(c);
+        var gapC = { id:nid(), type:'behavior', src:'local.category_order', name:'品类购买行为',
+          ns:'local', lv:'L2', text:'近 90 天 户外装备类目下单 = 0 次', reach:Math.round(TOTAL*0.62),
+          confirmed:true, roleTag:'gap',
+          note:'自动从原话「但还没买过装备」提取为缺口条件，<b>品类范围（户外装备）是猜的，请核对</b>' };
+        S.groups[0].conds.push(gapC);
+        render();
+      }, 200);
+      return intentBadge('hybrid') + ' &nbsp;检测到转折否定「但还没」——<b>用户已经自带缺口描述</b>，' +
+        '不需要 Agent 去推导"该不该有缺口"。<br><br>' +
+        '拆成两半：「喜欢露营」「一二线」正常翻译；' +
+        '「但还没买过装备」<b>直接落成缺口条件</b>，不进排除区（它描述的是"这批人有这个洞"，不是"要排除谁"）。';
+    }},
+  { q:'找一二线城市喜欢露营的年轻妈妈', run:function(){
+      setTimeout(function(){
+        var ct = ENUMS.filter(function(x){ return x.id==='trade.common.city_tier'; })[0];
+        S.groups[0].conds.push(mkEnum(ct, ['一线','新一线']));
+        var ids = ['interest.outdoor.camping','interest.outdoor.general','llm.intent.camping_purchase'];
+        var c = mkInterest(ids, []);
+        c.text = ids.map(function(id){ return INTERESTS.filter(function(x){ return x.id===id; })[0].name; }).join(' / ') + '（3 个候选待确认）';
+        S.groups[0].conds.push(c);
+        var bs = ENUMS.filter(function(x){ return x.id==='trade.common.babe_stage' || x.id==='babe_stage'; })[0];
+        say('a', intentBadge('descriptive') + ' &nbsp;没有指标动词，全是人群描述词——描述型。<br><br>' +
+          '「一二线」「喜欢露营」已翻译；「年轻」和「妈妈」是<b>模糊词，且各自对应多个候选字段</b>，' +
+          '这里先跳过精确映射，重点看下面这条提示。<br><br>' +
+          '<b>⚠ 这组条件里没有缺口段</b>——描述型输入本来就不自带缺口，这是设计使然。' +
+          '<br>如果只是<b>找种子用户 / 做画像分析</b>，无需缺口，可直接用当前条件。' +
+          '<br>如果打算<b>投放并验证效果</b>，这批人里可能混着大量本来就会转化的人，实验大概率测不出增量。');
+        render();
+      }, 200);
+      return intentBadge('descriptive') + ' &nbsp;没有指标动词，且没有转折否定——<b>纯描述型，且不自带缺口</b>。' +
+        '<br><br>正在翻译「一二线」「喜欢露营」两个明确词；「年轻」「妈妈」是模糊词——' +
+        '看看结果里会不会被提醒"没有缺口"。';
     }},
   { q:'再加上喜欢露营的人', run:function(){
       var ids = ['interest.outdoor.camping','interest.outdoor.general','llm.intent.camping_purchase'];
@@ -1157,9 +1271,13 @@ function condHTML(c, zone){
     h += '<div class="cnote warn">⚠ ' + esc(c.note) + '</div>';
   }
   if(vis && c.roleTag){
-    var RN = { qualify:'资格', gap:'缺口 ★', reach:'可触达', exclude:'排除' };
-    h += '<div class="cnote" style="color:var(--agent)">↳ 四段式角色：<b>' + RN[c.roleTag] + '</b>' +
+    var RN = { ability:'能力', preference:'偏好', gap:'缺口 ★', reach:'可触达', exclude:'排除' };
+    h += '<div class="cnote" style="color:var(--agent)">↳ 角色轴：<b>' + (RN[c.roleTag]||c.roleTag) + '</b>' +
       (c.roleTag==='gap' ? '（增量空间的来源，删掉这条策略就废了）' : '') + '</div>';
+    if(c.rDomain || c.rCategory || c.rWindow || c.rBorrowed){
+      h += structBadges({ domain:c.rDomain, category:c.rCategory, window:c.rWindow, borrowed:c.rBorrowed },
+        c.roleTag==='exclude');
+    }
   }
   if(vis && c.mapFrom){
     h += '<div class="cnote" style="color:var(--agent)">↳ 由业务词「' + esc(c.mapFrom) + '」映射而来，已确认口径</div>';
@@ -1888,9 +2006,17 @@ function renderStrategy(){
          '</b><div class="psrc">↳ 来自原话「提升<u>订单量</u>」</div></span></div>';
     b += '<div class="pfield"><span class="pk">目标方向</span><span class="pv">' + p.direction + '</span></div>';
     b += '<div class="pfield"><span class="pk">生效业务域</span><span class="pv"><b>' + p.domain.join(' + ') +
-         '</b><div class="psrc">↳ 来自原话「<u>生服</u>用增场景」；电商域由跨域策略引入</div></span></div>';
-    b += '<div class="pfield"><span class="pk">时间窗口</span><span class="pv">近 ' + p.window.v + ' 天' +
-         '<div class="pdef">⚠ 原话未指定，取系统默认值，标记 window_source: system_default，请核对</div></span></div>';
+         '</b><div class="psrc">↳ 来自原话，跨域信息由策略层补齐</div></span></div>';
+    if(p.category){
+      b += '<div class="pfield"><span class="pk">品类</span><span class="pv"><b>' + p.category +
+           '</b><div class="psrc">↳ 来自原话，圈选与缺口判定都要限定在该品类范围内</div></span></div>';
+    }
+    b += '<div class="pfield"><span class="pk">时间窗口</span><span class="pv">' +
+         (p.window.src==='user_specified' ? '<b>' + p.window.v + '</b>' : '近 ' + p.window.v + ' 天') +
+         (p.window.src==='user_specified'
+           ? '<div class="psrc">↳ 来自原话，用户明确指定</div>'
+           : '<div class="pdef">⚠ 原话未指定，取系统默认值，标记 window_source: system_default，请核对</div>') +
+         '</span></div>';
     b += '<div class="pfield"><span class="pk">人群意图</span><span class="pv">' + p.intent +
          '<div class="psrc">↳ 默认值，决定后续审批路径</div></span></div>';
     b += '<div class="pfield"><span class="pk">期望规模</span><span class="pv">' + p.scale +
@@ -1920,11 +2046,14 @@ function renderStrategy(){
     }).join('') + '</div>';
 
     if(stgScene){
+      var hasReady = !!SCENES[stgScene].readyRoles;
       b += '<div class="sect" style="margin-top:.5rem">子类型 · <b>可以都要</b>，但会产出两个独立人群</div><div class="subpick">' +
         '<button class="subbtn' + (stgSub.potential?' on':'') + '" data-stgsub="potential">' +
           (stgSub.potential?'✓ ':'') + '潜力高价值（反差型）</button>' +
-        '<button class="subbtn warn' + (stgSub.ready?' on':'') + '" data-stgsub="ready">' +
-          (stgSub.ready?'✓ ':'') + '现成高价值（叠加型）</button>' +
+        (hasReady
+          ? '<button class="subbtn warn' + (stgSub.ready?' on':'') + '" data-stgsub="ready">' +
+            (stgSub.ready?'✓ ':'') + '现成高价值（叠加型）</button>'
+          : '<span class="subbtn" style="opacity:.5;cursor:default">现成高价值（该场景暂无对应资产组合）</span>') +
         '</div>';
       if(stgSub.potential && stgSub.ready){
         b += '<div class="warnbox" style="background:var(--risk-soft);border-color:var(--risk)">' +
@@ -1970,24 +2099,31 @@ function renderStrategy(){
 
     b += '<div class="stg2col">' + picked.map(function(P){
       var key = P[0], title = P[1], R = P[2], action = P[3];
-      var h = '<div class="stgblock"><div class="sect">' + title + '</div>';
+      var h = '<div class="stgblock"><div class="sect">' + title + ' · 角色轴 × 结构轴</div>';
       h += '<div class="rolebox ' + (key==='potential'?'pot':'rdy') + '">';
       var seq = (key==='potential')
-        ? [['qualify','资格'],['gap','缺口 ★'],['reach','可触达'],['exclude','排除']]
-        : [['qualify','资格'],['same','同向 ⚠'],['reach','可触达'],['exclude','排除']];
+        ? [['ability','能力'],['preference','偏好'],['gap','缺口 ★'],['reach','可触达'],['exclude','排除']]
+        : [['ability','能力'],['same','同向 ⚠'],['reach','可触达'],['exclude','排除']];
       seq.forEach(function(x){
         var k = x[0], r = R[k]; if(!r) return;
+        var isEx = (k === 'exclude');
         h += '<div class="roleline' + (k==='gap'?' gapline':'') + '">' +
-          '<span class="rk ' + (k==='same'?'qualify':k) + '">' + x[1] + '</span>' +
+          '<span class="rk ' + (k==='same'?'ability':k) + '">' + x[1] + '</span>' +
           '<span class="rd">' + r.desc +
-            '<div class="rt">' + (r.tag || ('行为：' + r.behavior.ev + ' · 近' + r.behavior.w + '天')) + '</div></span>' +
-          '<span></span></div>';
+            '<div class="rt">' + (r.tag || ('行为：' + r.behavior.ev + ' · 近' + r.behavior.w + '天')) + '</div>' +
+            structBadges(r, isEx) +
+          '</span><span></span></div>';
       });
       h += '</div>';
       h += '<div class="' + (key==='potential'?'contract':'warnbox') + '">' +
         '<div class="' + (key==='potential'?'cl2':'wl') + '">下游动作建议</div>' + action + '</div>';
       return h + '</div>';
     }).join('') + '</div>';
+    b += '<div class="callout" style="margin-top:.5rem"><div class="cl">看这张表怎么读</div>' +
+      '<p style="font-size:.76rem;color:var(--ink-2);line-height:1.6">' +
+      '每一行左边的<b>紫色/绿色/灰色标签</b>是<b>角色轴</b>（为什么存在）；' +
+      '右下角那排小徽章是<b>结构轴</b>（域/品类/时间窗/是否排除，怎么被执行）。' +
+      '<b>两根轴是正交的</b>——同一个"能力"角色，域可能是电商也可能是生服，取决于目标域本身有没有数据。</p></div>';
 
     if(picked.length > 1){
       b += '<div class="warnbox" style="background:var(--risk-soft);border-color:var(--risk)">' +
@@ -2026,6 +2162,17 @@ function renderStrategy(){
     b, foot, stgStep===3);
 }
 
+
+function structBadges(r, isExclude){
+  var b = '<div class="structrow">';
+  if(r.domain) b += '<span class="sbadge dom">域 · ' + (DOMAIN_NAME[r.domain]||r.domain) + '</span>';
+  if(r.category) b += '<span class="sbadge cat">品类 · ' + r.category + '</span>';
+  if(r.window) b += '<span class="sbadge win">窗口 · ' + r.window.v + (r.window.unit||'') + '</span>';
+  if(r.borrowed) b += '<span class="sbadge bor">⇄ 跨域借用</span>';
+  b += '<span class="sbadge ' + (isExclude?'pol-neg':'pol-pos') + '">' + (isExclude?'排除 NOT':'纳入 AND') + '</span>';
+  return b + '</div>';
+}
+
 function buildConds(R, keys, roleLabel){
   var out = { conds:[], excludes:[], texts:[] };
   keys.forEach(function(k){
@@ -2034,13 +2181,15 @@ function buildConds(R, keys, roleLabel){
     var c = mkEnum(tg, r.vals.filter(function(v){
       return tg.vals.some(function(tv){ return tv[0] === v; }); }));
     if(!c.reach) return;
-    c.roleTag = (k==='same') ? 'qualify' : k;
+    c.roleTag = (k==='same') ? 'ability' : k;
+    c.rDomain = r.domain; c.rCategory = r.category; c.rWindow = r.window; c.rBorrowed = r.borrowed;
     out.conds.push(c); out.texts.push(c.text);
   });
   var ex = R.exclude && R.exclude.behavior;
   if(ex){
     var bc = mkBehavior(ex.ev, ex.w, ex.t, ex.mod, false);
     bc.roleTag = 'exclude';
+    bc.rDomain = R.exclude.domain; bc.rWindow = R.exclude.window;
     out.excludes.push(bc); out.texts.push('排除：' + bc.text);
   }
   return out;
@@ -2053,7 +2202,7 @@ function commitStrategy(){
   // 主人群：优先潜力型（有增量空间的那批），落入画布
   var mainKey = stgSub.potential ? 'potential' : 'ready';
   var mainR   = stgSub.potential ? sc.roles : sc.readyRoles;
-  var mainSeq = stgSub.potential ? ['qualify','gap','reach'] : ['qualify','same','reach'];
+  var mainSeq = stgSub.potential ? ['ability','preference','gap','reach'] : ['ability','same','reach'];
   var main = buildConds(mainR, mainSeq);
   main.conds.forEach(function(c){ S.groups[0].conds.push(c); });
   main.excludes.forEach(function(c){ S.excludes.push(c); });
@@ -2065,7 +2214,7 @@ function commitStrategy(){
 
   if(both){
     // 第二个人群：现成型，直接存为独立人群资产
-    var sec = buildConds(sc.readyRoles, ['qualify','same','reach']);
+    var sec = buildConds(sc.readyRoles, ['ability','same','reach']);
     var reach = sec.conds.length ? Math.round(sec.conds.reduce(function(m,c){
       return Math.min(m, c.reach); }, 1e9) * 0.6) : 0;
     var na = {
@@ -2093,6 +2242,40 @@ function commitStrategy(){
   closeModal();
   say('a', msg);
   render();
+}
+
+
+/* ===== 意图分诊：目标型 / 混合型 / 描述型 =====
+   规则轴，不用模型——正则可解释、可测试、出错能定位到具体哪条规则命中 */
+var INTENT_NEG_RE = /但(还)?没|但(还)?未|还没(有)?买|还未|从未|未曾|没买过|没有买过|未购买|但从未/;
+var INTENT_GOAL_VERB_RE = /提升|增加|提高|优化|降低|增长|拉新|促(进|活)?|唤醒|挽回/;
+var INTENT_METRIC_RE = /订单量|GMV|MAC|转化率|复购率|客单价|留存|人均|渗透率/;
+
+function classifyIntent(q){
+  var negM = q.match(INTENT_NEG_RE);
+  if(negM){
+    return { type:'hybrid', reason:'检测到转折否定「' + negM[0] + '」——用户已经自带缺口描述，不用 Agent 推导',
+             posClause: q.slice(0, negM.index), negClause: q.slice(negM.index) };
+  }
+  var gv = q.match(INTENT_GOAL_VERB_RE), mv = q.match(INTENT_METRIC_RE);
+  if(gv && mv){
+    return { type:'goal', reason:'检测到指标动词「' + gv[0] + '」＋ 量化指标「' + mv[0] +
+             '」，但没有具体用户画像——需要先推导策略，才知道圈谁' };
+  }
+  return { type:'descriptive', reason:'没有指标动词，且已包含具体的人群描述词——用户已经想清楚要谁，' +
+           'Agent 只需要把模糊词翻译成具体字段' };
+}
+function intentBadge(type){
+  var M = { goal:['目标型','mid'], hybrid:['混合型','strong'], descriptive:['描述型','none'] };
+  return '<span class="evb ' + M[type][1] + '">' + M[type][0] + '</span>';
+}
+function matchGoalCase(q){
+  for(var i=0;i<GOAL_CASES.length;i++){
+    var c = GOAL_CASES[i];
+    if(c.parsed.category && q.indexOf(c.parsed.category)>-1) return i;
+  }
+  if(/生服|用增|订单/.test(q)) return 0;
+  return -1;
 }
 
 /* ===== 语义映射面板：业务语言 → 候选资产 ===== */
@@ -2581,16 +2764,72 @@ function handleQuery(){
   if(!q) return;
   el.value = '';
   say('u', esc(q));
-  say('a', '<span class="thinking">正在拆解条件…</span>');
+  say('a', '<span class="thinking">正在分诊：目标型 / 混合型 / 描述型…</span>');
   setTimeout(function(){
     S.msgs.pop();
 
-    // 优先：识别业务词 → 走语义映射面板，不替用户决定
+    var intent = classifyIntent(q);
+    say('a', intentBadge(intent.type) + ' &nbsp;' + intent.reason);
+
+    /* ---- 分流 1：混合型 —— 用户自带缺口，不用 Agent 推导，只拆两个半句分别翻译 ---- */
+    if(intent.type === 'hybrid'){
+      setTimeout(function(){
+        var posHits = INTERESTS.filter(function(t){
+          return t.kw.some(function(k){ return intent.posClause.indexOf(k)>-1; }); });
+        var cityHit = /一二线/.test(q);
+        var msg = [];
+        if(cityHit){
+          var ct = ENUMS.filter(function(x){ return x.id==='trade.common.city_tier'; })[0];
+          S.groups[0].conds.push(mkEnum(ct, ['一线','新一线']));
+          msg.push('「一二线城市」→ 枚举属性，<b>直接落盘</b>');
+        }
+        if(posHits.length){
+          var c = mkInterest(posHits.map(function(x){ return x.id; }), []);
+          c.text = posHits.map(function(x){ return x.name; }).join(' 或 ');
+          c.confirmed = false;
+          S.groups[0].conds.push(c);
+          msg.push('「' + esc(intent.posClause) + '」→ 兴趣候选 <b>' + posHits.length + ' 个</b>，待你在条件卡上确认映射');
+        }
+        // 转折否定半句：直接落成 gap 角色条件，不是排除
+        // 品类猜测来自前半句命中的兴趣词，猜不出就显式承认，不能瞎编一个不相关的类目
+        var guessCat = posHits.length ? (posHits[0].vals ? posHits[0].vals[0] : posHits[0].name.replace(/偏好$/,'')) : null;
+        var catLabel = guessCat || '（未能从原话推断品类，需人工指定）';
+        var gapC = { id:nid(), type:'behavior', src:'local.category_order', name:'品类购买行为',
+          ns:'local', lv:'L2', text:'近 90 天 ' + catLabel + '类目下单 = 0 次', reach:Math.round(TOTAL*0.62),
+          confirmed:true, roleTag:'gap',
+          note:'自动从原话「' + esc(intent.negClause) + '」提取为缺口条件，品类猜测来自前半句「' +
+            esc(intent.posClause) + '」命中的兴趣词，<b>可能不准，务必核对</b>' };
+        S.groups[0].conds.push(gapC);
+        msg.push('「' + esc(intent.negClause) + '」→ <b>直接是缺口条件</b>，不用 Agent 推导，' +
+          '品类猜成「' + catLabel + '」——<b>猜错了就手动改，不是系统在编造答案</b>');
+        say('a', '混合型的关键：<b>缺口段是你自己带来的，Agent 只负责翻译，不负责判断"该不该有缺口"</b>。<br><br>' +
+          msg.join('<br>'));
+        render();
+      }, 260);
+      return;
+    }
+
+    /* ---- 分流 2：目标型 —— 没有画像，先推导策略，进策略向导 ---- */
+    if(intent.type === 'goal'){
+      var gi = matchGoalCase(q);
+      setTimeout(function(){
+        if(gi > -1){
+          say('a', '匹配到已建模的场景案例，<b>进入策略向导</b>——先拆目标，再判场景，最后查表生成五段式条件。');
+          openStrategy(gi);
+        } else {
+          say('a', '识别为目标型，但<b>当前 demo 案例库只覆盖"生服提订单量"与"到店餐饮拉新"两个场景</b>，' +
+            '未命中。<b>真实产品会走通用的杠杆分解流程</b>（拆指标 → 查现状定杠杆 → 按 R1 表出五段式），' +
+            '这里先不瞎编一个不存在的场景。');
+        }
+      }, 260);
+      return;
+    }
+
+    /* ---- 分流 3：描述型 —— 用户已有画像，只做翻译；结束后检查有没有缺口 ---- */
+    setTimeout(function(){
     var bt = matchBizTerm(q);
     if(bt.length){
-      say('a', '识别到 <b>' + bt.length + ' 个业务词</b>：' +
-        bt.map(function(x){ return '「' + esc(x) + '」'; }).join('、') +
-        '。<br><br>这些词在资产库里<b>各自对应多个候选标签</b>，口径与分母不同。' +
+      say('a', '这些词在资产库里<b>各自对应多个候选标签</b>，口径与分母不同。' +
         '<b>我不替你选</b>——把每个候选的口径、分母、覆盖规模、权限和历史证据摆出来，你来定。');
       setTimeout(function(){ openMapping(bt); }, 260);
       return;
@@ -2637,8 +2876,19 @@ function handleQuery(){
       '</b>，取值域封闭、语义无歧义，<b>已直接落盘</b>。');
     if(!reply.length) reply.push('没能从这句话里拆出可执行的条件。<b>我不猜</b>——' +
       '你说的是哪一类？枚举属性（消费等级 / 城市）、兴趣标签（露营 / 火锅），还是行为（曝光 / 下单）？');
+
+    // 描述型收尾：检查有没有缺口 —— 描述型天然不带缺口，这是设计使然，不是漏判
+    var hasGapLike = em.length && (neg || mod !== 'none');
+    if(reply.length && !hasGapLike){
+      reply.push('<b>⚠ 这组条件里没有缺口段</b>——描述型输入本来就不自带缺口（你已经想清楚要谁了，不是让 Agent 推导策略）。' +
+        '<br>如果只是<b>找种子用户 / 做画像分析 / 货盘匹配</b>，无需缺口，可直接用。' +
+        '<br>如果打算<b>投放并验证效果</b>，这批人里可能混着大量本来就会转化的人，实验大概率测不出增量——' +
+        '<b>要不要追加一条缺口？</b>比如"还没买过该品类"。');
+    }
+
     say('a', reply.join('<br><br>'));
     render();
+    }, 260);
   }, 480);
 }
 
