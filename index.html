@@ -1489,7 +1489,7 @@ function openModal(title, sub, body, foot){
   document.getElementById('mfoot').innerHTML = foot;
   mask.hidden = false;
 }
-function closeModal(){ mask.hidden = true; }
+function closeModal(){ mask.hidden = true; editTarget = null; }
 mask.addEventListener('click', function(e){ if(e.target === mask) closeModal(); });
 document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeModal(); });
 
@@ -1513,10 +1513,27 @@ function taxonomy(){
   });
   return tree;
 }
+var editTarget = null; // 正在编辑的条件 id，null = 新增模式
+
 function openPicker(target){
-  pickTarget = target; pickTab = 'tag';
+  pickTarget = target; pickTab = 'tag'; editTarget = null;
   pickState = { c1:null, c2:null, q:'', sel:null, enumVals:[], ints:[],
-                ev:'ecom.impression', w:30, t:3, mod:'none' };
+                ev:'ecom.impression', w:30, t:3, mod:'none', neg:'0' };
+  renderPicker();
+}
+function openEditCond(c){
+  editTarget = c.id;
+  if(c.type === 'behavior'){
+    pickTab = 'behavior';
+    pickState = { c1:null,c2:null,q:'',sel:null,enumVals:[],ints:[],
+      ev:c.ev, w:c.w, t:c.t, mod:c.mod, neg: c.neg ? '1' : '0' };
+  } else {
+    var tg = ENUMS.filter(function(x){ return x.id === c.src; })[0];
+    pickTab = 'tag';
+    pickState = { c1: tg ? tg.cat[0] : null, c2: tg ? tg.cat[1] : null, q:'',
+      sel: c.src, enumVals: (c.vals||[]).slice(), ints:[],
+      ev:'ecom.impression', w:30, t:3, mod:'none', neg:'0' };
+  }
   renderPicker();
 }
 function pickedTag(){
@@ -1539,12 +1556,16 @@ function renderPicker(){
   var can = pickTab === 'behavior' ||
             (cur && cur.k === 'enum' && pickState.enumVals.length) ||
             (cur && cur.k === 'interest' && pickState.ints.length);
-  var note = pickTab === 'behavior' ? '时间窗与阈值为系统默认值，加入后会标黄待核对'
-           : (cur && cur.k === 'interest' ? '你自己从分类里选的标签，无需再确认语义映射' : '');
+  var note = editTarget ? '改完保存，条件 ID 与血缘信息保持不变'
+           : (pickTab === 'behavior' ? '时间窗与阈值为系统默认值，加入后会标黄待核对'
+           : (cur && cur.k === 'interest' ? '你自己从分类里选的标签，无需再确认语义映射' : ''));
   var foot = '<span class="fnote">' + note + '</span>' +
     '<button class="btn sec" data-close="1">取消</button>' +
-    '<button class="btn pri" id="pickok"' + (can?'':' disabled') + '>加入画布</button>';
-  openModal('添加条件', pickTarget==='EX' ? '加入排除区' : '加入条件组', b, foot);
+    '<button class="btn pri" id="pickok"' + (can?'':' disabled') + '>' +
+      (editTarget ? '保存修改' : '加入画布') + '</button>';
+  openModal(editTarget ? '编辑条件取值' : '添加条件',
+    editTarget ? '改完立即重算规模，不用重新过一遍问句' : (pickTarget==='EX' ? '加入排除区' : '加入条件组'),
+    b, foot);
 }
 
 /* 浏览态：左树 + 右列表 */
@@ -1674,7 +1695,9 @@ function behaviorPane(){
     '风险不在理解，在<b>口径</b>——"曝光"算不算划过即曝光、"转化"算下单还是支付。</div>';
   b += '<div class="sect">常用组合</div><div class="tplrow">' + TPL.map(function(t,i){
     return '<button class="chip" data-tpl="' + i + '">' + t.n + '</button>'; }).join('') + '</div>';
-  b += '<div class="builder"><span class="lbl">用户</span><select id="bneg"><option value="0">做过</option><option value="1">没做过</option></select>';
+  b += '<div class="builder"><span class="lbl">用户</span><select id="bneg">' +
+    '<option value="0"' + (pickState.neg!=='1'?' selected':'') + '>做过</option>' +
+    '<option value="1"' + (pickState.neg==='1'?' selected':'') + '>没做过</option></select>';
   b += '<select id="bev">' + EVENTS.map(function(e){
     return '<option value="' + e.id + '"' + (pickState.ev===e.id?' selected':'') + (!canSee(e.lv)?' disabled':'') +
       '>' + e.name + (canSee(e.lv)?'':' · 需 ' + e.lv) + '</option>'; }).join('') + '</select>';
@@ -1684,7 +1707,7 @@ function behaviorPane(){
     return '<option value="' + t[0] + '"' + (pickState.t===t[0]?' selected':'') + '>' + t[0] + ' 次</option>'; }).join('') + '</select>';
   b += '<select id="bmod">' + MODS.map(function(m){
     return '<option value="' + m[0] + '"' + (pickState.mod===m[0]?' selected':'') + '>' + m[1] + '</option>'; }).join('') + '</select></div>';
-  var prev = mkBehavior(pickState.ev, pickState.w, pickState.t, pickState.mod, false);
+  var prev = mkBehavior(pickState.ev, pickState.w, pickState.t, pickState.mod, pickState.neg==='1');
   b += '<div class="warnbox"><div class="wl">预览</div>' + esc(prev.text) + ' → 约 <b>' + fmt(prev.reach) +
        '</b><br>时间窗与阈值为<b>系统默认值</b>，IR 中标记 <code>window_source: system_default</code>，前端标黄待核对。</div>';
   return b;
@@ -1957,8 +1980,7 @@ document.addEventListener('click', function(e){
   if(d.confirm){ openConfirm(d.confirm); return; }
   if(d.edit){
     var c = allConds().filter(function(x){ return x.id===d.edit; })[0];
-    say('a', '编辑功能在 demo 里简化了——真实产品中点这里会回到对应的构造器，' +
-      '<b>改完重新编译 SQL，IR 始终是唯一真相</b>。');
+    if(c) openEditCond(c);
     return;
   }
   if(d.apply){
@@ -2108,6 +2130,7 @@ document.addEventListener('change', function(e){
   if(id === 'bw'){ pickState.w = +e.target.value; renderPicker(); }
   if(id === 'bt'){ pickState.t = +e.target.value; renderPicker(); }
   if(id === 'bmod'){ pickState.mod = e.target.value; renderPicker(); }
+  if(id === 'bneg'){ pickState.neg = e.target.value; renderPicker(); }
 });
 document.getElementById('qin').addEventListener('keydown', function(e){
   if(e.key === 'Enter') handleQuery();
@@ -2124,7 +2147,7 @@ function commitPick(){
   if(pickTab === 'behavior'){
     var neg = document.getElementById('bneg');
     c = mkBehavior(pickState.ev, pickState.w, pickState.t, pickState.mod, neg && neg.value==='1');
-    c.note = '时间窗与阈值为系统默认值，请核对';
+    if(!editTarget) c.note = '时间窗与阈值为系统默认值，请核对';
   } else {
     var cur = pickedTag();
     if(!cur) return;
@@ -2135,6 +2158,16 @@ function commitPick(){
       c = mkInterest(pickState.ints, pickState.ints);
       c.confirmed = true;
     }
+  }
+  if(editTarget){
+    var old = allConds().filter(function(x){ return x.id===editTarget; })[0];
+    c.id = editTarget;
+    if(old && old.mapFrom) c.mapFrom = old.mapFrom;
+    replaceCond(editTarget, c);
+    closeModal();
+    toast('已更新「<b>' + esc(c.text) + '</b>」，规模已重算为 <b>' + fmt(c.reach) + '</b>。');
+    render();
+    return;
   }
   if(pickTarget === 'EX') S.excludes.push(c);
   else {
