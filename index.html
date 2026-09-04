@@ -1021,7 +1021,7 @@ var DOMAIN_NAME = { ecom:'电商', local:'生服', cross:'跨域', common:'通�
 var GOAL_CASES = [
   { q:'在生服用增场景提升订单量',
     parsed:{ metric:'订单量', direction:'提升', domain:['生服','电商主端'],
-             window:{ v:30, src:'system_default' }, intent:'投放', scale:'—' },
+             period:null, intent:'投放', scale:'—' },
     matched:['new_growth','freq_up'],
     crossDomain:true,
     evidence:{
@@ -1030,7 +1030,7 @@ var GOAL_CASES = [
     }},
   { q:'生服 Q4 要提升到店餐饮的订单量',
     parsed:{ metric:'订单量', direction:'提升', domain:['生服'], category:'到店餐饮',
-             window:{ v:'Q4（10–12月）', src:'user_specified' }, intent:'投放', scale:'—' },
+             period:{ v:'Q4（10–12月）', src:'user_specified' }, intent:'投放', scale:'—' },
     matched:['dining_new'],
     crossDomain:true,
     evidence:{
@@ -2011,17 +2011,22 @@ function renderStrategy(){
       b += '<div class="pfield"><span class="pk">品类</span><span class="pv"><b>' + p.category +
            '</b><div class="psrc">↳ 来自原话，圈选与缺口判定都要限定在该品类范围内</div></span></div>';
     }
-    b += '<div class="pfield"><span class="pk">时间窗口</span><span class="pv">' +
-         (p.window.src==='user_specified' ? '<b>' + p.window.v + '</b>' : '近 ' + p.window.v + ' 天') +
-         (p.window.src==='user_specified'
-           ? '<div class="psrc">↳ 来自原话，用户明确指定</div>'
-           : '<div class="pdef">⚠ 原话未指定，取系统默认值，标记 window_source: system_default，请核对</div>') +
+    b += '<div class="pfield"><span class="pk">达成周期</span><span class="pv">' +
+         (p.period
+           ? '<b>' + p.period.v + '</b><div class="psrc">↳ 来自原话，用户明确指定</div>'
+           : '未指定<div class="psrc">↳ 原话未提截止期，<b>视为长期持续目标，不设默认值</b>——目标周期没有"合理默认"，猜一个反而误导</div>') +
          '</span></div>';
     b += '<div class="pfield"><span class="pk">人群意图</span><span class="pv">' + p.intent +
          '<div class="psrc">↳ 默认值，决定后续审批路径</div></span></div>';
     b += '<div class="pfield"><span class="pk">期望规模</span><span class="pv">' + p.scale +
          '<div class="psrc">↳ 未指定，由策略层预估后回填</div></span></div>';
     b += '</div>';
+    b += '<div class="warnbox" style="background:var(--gov-soft);border-color:var(--gov)">' +
+      '<div class="wl" style="color:var(--gov)">⚠ 这里的"达成周期"不是第三步的"时间窗"</div>' +
+      '<b>达成周期</b>是业务方希望这个目标什么时候见效（如 Q4），<b>全局唯一一个，没有就是没有</b>。<br>' +
+      '<b>第三步每个角色（能力/缺口/触达…）各自还有一个独立的时间窗</b>（如"近 30 天活跃"），' +
+      '那个是<b>圈选标签时往历史数据回看多久</b>，跟这里的达成周期<b>互不影响、可以完全不同</b>——' +
+      '比如目标是 Q4 出效果，但"是否活跃"的判断窗口仍然可能是最近 30 天，不会因为目标是 Q4 就把回看窗口也拉到 3 个月。</div>';
     b += '<div class="warnbox"><div class="wl">兜底规则</div>' +
       '若<b>核心指标</b>或<b>业务域</b>缺失，<b>直接中断并回问业务方</b>，不猜测、不用默认值糊过去。' +
       '本例两项齐全，可进入下一步。</div>';
