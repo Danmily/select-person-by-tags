@@ -890,7 +890,14 @@ var SCENES = {
       gap:    { desc:'目标域（生服）无交易记录', tag:'trade.local.is_new', vals:['未核销'] },
       reach:  { desc:'电商侧近 30 天活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
       exclude:{ desc:'近 30 天已被生服内容触达', behavior:{ ev:'local.verify', w:30, t:1, mod:'none' } }
-    }},
+    },
+    readyRoles:{
+      qualify:{ desc:'源域（电商）消费等级 ≥ L4', tag:'trade.ecom.consume_level', vals:['L4','L5'] },
+      same:   { desc:'目标域（生服）也已是成熟老客', tag:'trade.local.is_new', vals:['成熟老客'] },
+      reach:  { desc:'两侧均活跃', tag:'trade.ecom.activity', vals:['高活'] },
+      exclude:{ desc:'近 7 天已被触达', behavior:{ ev:'local.verify', w:7, t:1, mod:'none' } }
+    },
+    readyAction:'跨域 VIP 权益维系（两域都已高价值，重点是别流失）' },
   freq_up: {
     name:'老客频次提升', lever:'复购频次', gapType:'在买，但频次低于潜力',
     metrics:['订单量','复购率'],
@@ -899,7 +906,14 @@ var SCENES = {
       gap:    { desc:'生服近期活跃度掉到低活/沉默', tag:'trade.local.activity', vals:['低活','沉默'] },
       reach:  { desc:'电商侧仍然活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
       exclude:{ desc:'近 30 天已核销过', behavior:{ ev:'local.verify', w:30, t:1, mod:'none' } }
-    }},
+    },
+    readyRoles:{
+      qualify:{ desc:'生服已是成熟老客', tag:'trade.local.is_new', vals:['成熟老客'] },
+      same:   { desc:'且生服活跃度本来就高', tag:'trade.local.activity', vals:['高活'] },
+      reach:  { desc:'电商侧也活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
+      exclude:{ desc:'近 7 天已被触达', behavior:{ ev:'local.verify', w:7, t:1, mod:'none' } }
+    },
+    readyAction:'高频老客权益维系 / 会员升级（不发券，发了是浪费）' },
   awaken: {
     name:'沉睡用户唤醒', lever:'复购唤回', gapType:'转化过，但流失了',
     metrics:['订单量','MAC'],
@@ -908,7 +922,14 @@ var SCENES = {
       gap:    { desc:'流失倾向高风险', tag:'trade.cross.churn_risk', vals:['高风险'] },
       reach:  { desc:'电商侧仍然活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
       exclude:{ desc:'近 30 天已被唤醒触达', behavior:{ ev:'local.verify', w:30, t:1, mod:'none' } }
-    }},
+    },
+    readyRoles:{
+      qualify:{ desc:'生服成熟老客', tag:'trade.local.is_new', vals:['成熟老客'] },
+      same:   { desc:'且流失风险低（本来就稳）', tag:'trade.cross.churn_risk', vals:['低风险','稳定'] },
+      reach:  { desc:'电商侧活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
+      exclude:{ desc:'近 7 天已被触达', behavior:{ ev:'local.verify', w:7, t:1, mod:'none' } }
+    },
+    readyAction:'稳定客群维系，作为对照基准人群' },
   value_up: {
     name:'单客价值提升', lever:'客单价', gapType:'在买，但买得比潜力便宜',
     metrics:['GMV','客单价'],
@@ -917,7 +938,14 @@ var SCENES = {
       gap:    { desc:'但客单价档位偏低', tag:'trade.ecom.aov_band', vals:['0–50','50–150'] },
       reach:  { desc:'近 30 天活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
       exclude:{ desc:'近 30 天已转化', behavior:{ ev:'ecom.order', w:30, t:1, mod:'none' } }
-    }}
+    },
+    readyRoles:{
+      qualify:{ desc:'电商消费等级 L4/L5', tag:'trade.ecom.consume_level', vals:['L4','L5'] },
+      same:   { desc:'且客单价档位本来就高', tag:'trade.ecom.aov_band', vals:['150–500','500+'] },
+      reach:  { desc:'近 30 天活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
+      exclude:{ desc:'近 7 天已转化', behavior:{ ev:'ecom.order', w:7, t:1, mod:'none' } }
+    },
+    readyAction:'高客单人群维系 / 高端货盘优先承接' }
 };
 
 var GOAL_CASES = [
@@ -1822,10 +1850,10 @@ function behaviorPane(){
 
 
 /* ===== 策略决策向导：业务目标 → 场景 → 四段式条件 ===== */
-var stgStep = 1, stgCase = null, stgScene = null, stgSub = 'potential';
+var stgStep = 1, stgCase = null, stgScene = null, stgSub = { potential:true, ready:false };
 
 function openStrategy(caseIdx){
-  stgCase = GOAL_CASES[caseIdx]; stgStep = 1; stgScene = null; stgSub = 'potential';
+  stgCase = GOAL_CASES[caseIdx]; stgStep = 1; stgScene = null; stgSub = { potential:true, ready:false };
   renderStrategy();
 }
 function stgBar(){
@@ -1880,50 +1908,92 @@ function renderStrategy(){
     }).join('') + '</div>';
 
     if(stgScene){
-      b += '<div class="sect" style="margin-top:.5rem">子类型</div><div class="subpick">' +
-        '<button class="subbtn' + (stgSub==='potential'?' on':'') + '" data-stgsub="potential">潜力高价值（反差型）</button>' +
-        '<button class="subbtn warn' + (stgSub==='ready'?' on':'') + '" data-stgsub="ready">现成高价值（叠加型）</button>' +
+      b += '<div class="sect" style="margin-top:.5rem">子类型 · <b>可以都要</b>，但会产出两个独立人群</div><div class="subpick">' +
+        '<button class="subbtn' + (stgSub.potential?' on':'') + '" data-stgsub="potential">' +
+          (stgSub.potential?'✓ ':'') + '潜力高价值（反差型）</button>' +
+        '<button class="subbtn warn' + (stgSub.ready?' on':'') + '" data-stgsub="ready">' +
+          (stgSub.ready?'✓ ':'') + '现成高价值（叠加型）</button>' +
         '</div>';
-      if(stgSub === 'ready'){
+      if(stgSub.potential && stgSub.ready){
         b += '<div class="warnbox" style="background:var(--risk-soft);border-color:var(--risk)">' +
-          '<div class="wl" style="color:var(--risk)">⚠ 使用边界</div>' +
-          '<b>现成高价值是叠加型条件，没有增量空间。</b>适合 VIP 维系、白名单管理、服务分层；' +
+          '<div class="wl" style="color:var(--risk)">🔴 两批都要，但绝不能合成一个人群</div>' +
+          '这是两批<b>需要用完全不同策略</b>的人：<br>' +
+          '· <b>潜力型</b> → 发券 / 推送刺激（有增量空间，撬得动）<br>' +
+          '· <b>现成型</b> → 权益维系 / VIP 服务（<b>本来就会买，发券纯属浪费预算</b>）<br><br>' +
+          '<b>更要命的是：合成一个人群跑同一个实验，现成那部分会稀释掉实验效果</b>——' +
+          '他们本来就会转化，会把一个真正有效的策略压成"不显著"。<br>' +
+          '<b>所以下一步会产出两个独立人群，各自带不同的下游动作建议。</b></div>';
+      } else if(stgSub.ready){
+        b += '<div class="warnbox" style="background:var(--risk-soft);border-color:var(--risk)">' +
+          '<div class="wl" style="color:var(--risk)">⚠ 只选现成高价值时的使用边界</div>' +
+          '<b>叠加型条件没有增量空间。</b>适合 VIP 维系、白名单管理、服务分层；' +
           '<b>不得用于验证策略增量效果</b>——这批人本来就会转化，实验必然不显著，' +
-          '或显著也无法归因到策略。</div>';
-      } else {
+          '或显著也无法归因到策略。<br><br>' +
+          '<b>如果你的目的是做实验，请同时勾上「潜力高价值」。</b></div>';
+      } else if(stgSub.potential){
         b += '<div class="warnbox"><div class="wl">反差型</div>' +
           '条件里必须有一段是「某维度高 <b>AND</b> 目标维度低/空」——' +
-          '<b>这一段就是增量空间的来源，缺了它整个策略退化成"圈一批优质用户"，毫无意义。</b></div>';
+          '<b>这一段就是增量空间的来源，缺了它整个策略退化成"圈一批优质用户"，毫无意义。</b><br><br>' +
+          '如果同时还想维系已经高价值的那批人，<b>可以把「现成高价值」也勾上</b>，会额外产出一个独立人群。</div>';
+      } else {
+        b += '<div class="warnbox" style="background:var(--gov-soft);border-color:var(--gov)">' +
+          '<div class="wl" style="color:var(--gov)">请至少选一个子类型</div></div>';
       }
     }
     foot = '<span class="fnote">R1 · 场景判定</span>' +
       '<button class="btn sec" data-stgback="1">上一步</button>' +
-      '<button class="btn pri" data-stgnext="1"' + (stgScene?'':' disabled') + '>生成策略</button>';
+      '<button class="btn pri" data-stgnext="1"' +
+        ((stgScene && (stgSub.potential||stgSub.ready))?'':' disabled') + '>生成策略</button>';
   }
 
   if(stgStep === 3){
-    var sc = SCENES[stgScene], R = sc.roles, ev = stgCase.evidence[stgScene];
+    var sc = SCENES[stgScene], ev = stgCase.evidence[stgScene];
+    var picked = [];
+    if(stgSub.potential) picked.push(['potential','潜力高价值（反差型）', sc.roles, '发券 / 推送刺激 —— 有增量空间']);
+    if(stgSub.ready)     picked.push(['ready','现成高价值（叠加型）', sc.readyRoles, sc.readyAction]);
+
     b += '<div class="mapintro">查 <b>R1 映射表</b>，' + sc.name +
-      ' 这一行直接给出四段式各角色该用哪个字段——<b>这一步是查表，不是模型推理</b>。</div>';
-    b += '<div style="background:var(--surface);border:1px solid var(--rule);border-radius:5px;overflow:hidden">';
-    [['qualify','资格'],['gap','缺口 ★'],['reach','可触达'],['exclude','排除']].forEach(function(x){
-      var k = x[0], r = R[k];
-      b += '<div class="roleline' + (k==='gap'?' gapline':'') + '">' +
-        '<span class="rk ' + k + '">' + x[1] + '</span>' +
-        '<span class="rd">' + r.desc +
-          '<div class="rt">' + (r.tag || ('行为：' + r.behavior.ev + ' · 近' + r.behavior.w + '天')) + '</div></span>' +
-        '<span></span></div>';
+      ' 这一行直接给出四段式各角色该用哪个字段——<b>这一步是查表，不是模型推理</b>。' +
+      (picked.length>1 ? '<br><br><b>你选了两个子类型，下面是两套独立策略，会产出两个人群。</b>' : '') + '</div>';
+
+    picked.forEach(function(P){
+      var key = P[0], title = P[1], R = P[2], action = P[3];
+      b += '<div class="sect" style="margin-top:.6rem">' + title + '</div>';
+      b += '<div style="background:var(--surface);border:1px solid ' +
+           (key==='potential'?'var(--agent)':'var(--rule)') + ';border-radius:5px;overflow:hidden">';
+      var seq = (key==='potential')
+        ? [['qualify','资格'],['gap','缺口 ★'],['reach','可触达'],['exclude','排除']]
+        : [['qualify','资格'],['same','同向 ⚠'],['reach','可触达'],['exclude','排除']];
+      seq.forEach(function(x){
+        var k = x[0], r = R[k]; if(!r) return;
+        b += '<div class="roleline' + (k==='gap'?' gapline':'') + '">' +
+          '<span class="rk ' + (k==='same'?'qualify':k) + '">' + x[1] + '</span>' +
+          '<span class="rd">' + r.desc +
+            '<div class="rt">' + (r.tag || ('行为：' + r.behavior.ev + ' · 近' + r.behavior.w + '天')) + '</div></span>' +
+          '<span></span></div>';
+      });
+      b += '</div>';
+      b += '<div class="' + (key==='potential'?'contract':'warnbox') + '" style="margin-top:.35rem">' +
+        '<div class="' + (key==='potential'?'cl2':'wl') + '">下游动作建议</div>' + action + '</div>';
     });
-    b += '</div>';
+
+    if(picked.length > 1){
+      b += '<div class="warnbox" style="background:var(--risk-soft);border-color:var(--risk)">' +
+        '<div class="wl" style="color:var(--risk)">🔴 两个人群必须分开投，不能合并</div>' +
+        '合并后跑同一个实验，<b>现成型那部分会稀释掉实验效果</b>——他们本来就会转化。<br>' +
+        '正确做法：<b>潜力型进实验组做增量验证；现成型走维系动作，或作为对照基准。</b></div>';
+    }
 
     b += '<div class="warnbox"><div class="wl">R2 · 缺口判定公式校验</div>' +
       '<code style="font-family:var(--fm);font-size:.68rem">(来源.字段 ∈ 高优区间) AND (目标.对应字段 ∈ 低优区间 OR IS NULL)</code><br>' +
-      '本例代入：来源=<b>电商</b>，目标=<b>生服</b> → <b>✓ 符合公式，缺口段非空</b></div>';
+      (stgSub.potential
+        ? '潜力型代入：来源=<b>电商</b>，目标=<b>生服</b> → <b>✓ 符合公式，缺口段非空</b>'
+        : '⚠ 仅选了现成型，<b>无缺口段</b>——公式校验不适用，该人群不具备增量空间') + '</div>';
 
     if(stgCase.crossDomain){
       b += '<div class="warnbox" style="background:var(--gov-soft);border-color:var(--gov)">' +
         '<div class="wl" style="color:var(--gov)">跨域实现路径判定</div>' +
-        '组合模式：<b>潜力挖掘型（差集）</b><br>' +
+        '组合模式：<b>' + (stgSub.potential?'潜力挖掘型（差集）':'价值叠加型（交集）') + '</b><br>' +
         '无预构建跨域字段覆盖该概念 → <b>降级走路径②：各域分别圈选 + 集合运算</b><br>' +
         '⚠ 经账号层 ID Mapping（约 85%），<b>实际可触达可能低估 ~15%</b>，' +
         '且未打通用户偏向低活跃/单端——<b>而这恰恰是破圈型最想触达的那批人</b>。</div>';
@@ -1933,40 +2003,82 @@ function renderStrategy(){
       (ev.lv==='强' ? '<br><b>有 AB 对照且正显著，可直接作为推荐依据。</b>' :
        '<br><b>未达显著，标注"样本量可能不足"，不作强背书。</b>') + '</div>';
 
-    foot = '<span class="fnote">生成后可在画布上继续调整</span>' +
+    foot = '<span class="fnote">' + (picked.length>1?'将产出 2 个独立人群':'生成后可在画布上继续调整') + '</span>' +
       '<button class="btn sec" data-stgback="1">上一步</button>' +
-      '<button class="btn pri" data-stgdone="1">落入条件画布</button>';
+      '<button class="btn pri" data-stgdone="1">' +
+        (picked.length>1?'生成两个人群':'落入条件画布') + '</button>';
   }
 
   openModal('策略决策 · 业务目标转圈人条件',
     stgStep===1?'第一层 · 目标解析':(stgStep===2?'第二层 · 场景与约束拆解':'第三层 · 人群策略'), b, foot);
 }
 
-function commitStrategy(){
-  var sc = SCENES[stgScene], R = sc.roles, added = [];
-  ['qualify','gap','reach'].forEach(function(k){
-    var r = R[k];
-    var tg = ENUMS.filter(function(x){ return x.id === r.tag; })[0];
-    if(!tg) return;
+function buildConds(R, keys, roleLabel){
+  var out = { conds:[], excludes:[], texts:[] };
+  keys.forEach(function(k){
+    var r = R[k]; if(!r || !r.tag) return;
+    var tg = ENUMS.filter(function(x){ return x.id === r.tag; })[0]; if(!tg) return;
     var c = mkEnum(tg, r.vals.filter(function(v){
       return tg.vals.some(function(tv){ return tv[0] === v; }); }));
-    if(!c.reach){ return; }
-    c.roleTag = k;
-    S.groups[0].conds.push(c);
-    added.push(c.text);
+    if(!c.reach) return;
+    c.roleTag = (k==='same') ? 'qualify' : k;
+    out.conds.push(c); out.texts.push(c.text);
   });
-  var ex = R.exclude.behavior;
+  var ex = R.exclude && R.exclude.behavior;
   if(ex){
     var bc = mkBehavior(ex.ev, ex.w, ex.t, ex.mod, false);
     bc.roleTag = 'exclude';
-    S.excludes.push(bc);
-    added.push('排除：' + bc.text);
+    out.excludes.push(bc); out.texts.push('排除：' + bc.text);
   }
+  return out;
+}
+
+function commitStrategy(){
+  var sc = SCENES[stgScene];
+  var both = stgSub.potential && stgSub.ready;
+
+  // 主人群：优先潜力型（有增量空间的那批），落入画布
+  var mainKey = stgSub.potential ? 'potential' : 'ready';
+  var mainR   = stgSub.potential ? sc.roles : sc.readyRoles;
+  var mainSeq = stgSub.potential ? ['qualify','gap','reach'] : ['qualify','same','reach'];
+  var main = buildConds(mainR, mainSeq);
+  main.conds.forEach(function(c){ S.groups[0].conds.push(c); });
+  main.excludes.forEach(function(c){ S.excludes.push(c); });
+
+  var msg = '已按 <b>' + sc.name + '</b>（' + sc.lever + '杠杆）生成' +
+    (both ? '<b>两个独立人群</b>' : '四段式条件') + '：<br><br>' +
+    '<b>① ' + (stgSub.potential?'潜力高价值（已落入画布）':'现成高价值（已落入画布）') + '</b><br>' +
+    main.texts.map(function(t){ return '· ' + esc(t); }).join('<br>');
+
+  if(both){
+    // 第二个人群：现成型，直接存为独立人群资产
+    var sec = buildConds(sc.readyRoles, ['qualify','same','reach']);
+    var reach = sec.conds.length ? Math.round(sec.conds.reduce(function(m,c){
+      return Math.min(m, c.reach); }, 1e9) * 0.6) : 0;
+    var na = {
+      id:'aud_' + (10600 + AUDS.length),
+      name: sc.name + ' · 现成高价值（维系）',
+      kind:'snap', reach:reach, owner:'我', biz:['电商','生服'],
+      created:'2026-'+today(), updated:'2026-'+today(), ver:1, freq:'—',
+      expire:7, alertPct:'20',
+      desc:'与潜力型同场景生成的第二个人群。' + sc.readyAction,
+      conds: sec.conds.map(function(c){ return c.text; }),
+      excl: sec.excludes.map(function(c){ return c.text; }),
+      versions:[{ v:1, date:today(), by:'我', note:'策略决策向导生成（现成高价值）', reach:reach }],
+      refs:[], issues:[]
+    };
+    AUDS.unshift(na);
+    msg += '<br><br><b>② 现成高价值（已存入「我的人群」）</b><br>' +
+      sec.texts.map(function(t){ return '· ' + esc(t); }).join('<br>') +
+      '<br><br>🔴 <b>这两批人不要合并投放</b>：潜力型进实验组做增量验证；' +
+      '现成型走「' + sc.readyAction + '」，或作为对照基准。' +
+      '<b>合并会让现成那部分稀释掉实验效果。</b>';
+    renderTabs();
+  }
+
+  msg += '<br><br><b>注意「缺口」那一段</b>——去掉它，策略就退化成"圈一批优质用户"，做不出增量。';
   closeModal();
-  say('a', '已按 <b>' + sc.name + '</b>（' + sc.lever + '杠杆）生成四段式条件：<br>' +
-    added.map(function(t){ return '· ' + esc(t); }).join('<br>') +
-    '<br><br><b>注意「缺口」那一段</b>——去掉它，这就退化成"圈一批优质用户"，' +
-    '实验必然做不出增量。这一段才是整个策略的灵魂。');
+  say('a', msg);
   render();
 }
 
@@ -2263,7 +2375,7 @@ document.addEventListener('click', function(e){
   }
   if(d.stgback){ stgStep--; renderStrategy(); return; }
   if(d.stgscene){ stgScene = d.stgscene; renderStrategy(); return; }
-  if(d.stgsub){ stgSub = d.stgsub; renderStrategy(); return; }
+  if(d.stgsub){ stgSub[d.stgsub] = !stgSub[d.stgsub]; renderStrategy(); return; }
   if(d.stgdone){ commitStrategy(); return; }
   if(d.stggo !== undefined){ openStrategy(+d.stggo); return; }
   if(d.cand !== undefined){
