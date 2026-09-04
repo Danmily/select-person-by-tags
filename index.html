@@ -424,6 +424,45 @@ code{font-family:var(--fm);font-size:.92em;background:var(--surface-2);padding:.
   border-radius:2px;display:block;margin:.3rem 0;color:var(--ink-2);}
 .vsbox .x{color:var(--risk);font-weight:600;}
 
+
+/* ===== 策略决策向导 ===== */
+.stgbar{display:flex;gap:.3rem;margin-bottom:.6rem;flex-wrap:wrap;}
+.stgstep{flex:1 1 90px;border:1px solid var(--rule);border-radius:4px;padding:.35rem .5rem;
+  font-size:.68rem;color:var(--ink-3);background:var(--surface-2);text-align:center;}
+.stgstep.on{border-color:var(--agent);background:var(--agent-soft);color:var(--agent);font-weight:700;}
+.stgstep.done{border-color:var(--ok);color:var(--ok);background:var(--ok-soft);}
+.pfield{display:grid;grid-template-columns:88px minmax(0,1fr);gap:.4rem;font-size:.75rem;
+  padding:.32rem 0;border-bottom:1px solid var(--rule-soft);align-items:start;}
+.pfield:last-child{border-bottom:none;}
+.pfield .pk{font-family:var(--fm);font-size:.62rem;letter-spacing:.05em;color:var(--ink-3);font-weight:700;padding-top:.12rem;}
+.pfield .pv{color:var(--ink);}
+.pfield .psrc{font-family:var(--fm);font-size:.6rem;color:var(--agent);margin-top:.1rem;}
+.pfield .pdef{font-family:var(--fm);font-size:.6rem;color:var(--gov);margin-top:.1rem;}
+.scard2{border:1px solid var(--rule);border-radius:5px;padding:.65rem .75rem;background:var(--surface);
+  width:100%;text-align:left;display:flex;flex-direction:column;gap:.3rem;}
+.scard2:hover{border-color:var(--agent);}
+.scard2.on{border-color:var(--agent);background:var(--agent-soft);}
+.scard2 .s1{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;}
+.scard2 .snm{font-size:.85rem;font-weight:700;color:var(--ink);}
+.scard2 .slv{font-family:var(--fm);font-size:.6rem;color:var(--ink-3);}
+.scard2 .sgap{font-size:.72rem;color:var(--ink-2);}
+.subpick{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.15rem;}
+.subbtn{border:1px solid var(--rule);border-radius:20px;padding:.2rem .6rem;font-size:.68rem;color:var(--ink-3);}
+.subbtn.on{background:var(--agent-soft);border-color:var(--agent);color:var(--agent);font-weight:700;}
+.subbtn.warn.on{background:var(--risk-soft);border-color:var(--risk);color:var(--risk);}
+.roleline{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:.5rem;align-items:start;
+  padding:.45rem .6rem;border-bottom:1px solid var(--rule-soft);font-size:.75rem;}
+.roleline:last-child{border-bottom:none;}
+.roleline .rk{font-family:var(--fm);font-size:.6rem;font-weight:700;padding:.1rem .3rem;
+  border-radius:2px;text-align:center;}
+.rk.qualify{background:var(--surface-3);color:var(--ink-2);}
+.rk.gap{background:var(--agent-soft);color:var(--agent);}
+.rk.reach{background:var(--ok-soft);color:var(--ok);}
+.rk.exclude{background:var(--risk-soft);color:var(--risk);}
+.roleline .rd{color:var(--ink);}
+.roleline .rt{font-family:var(--fm);font-size:.62rem;color:var(--ink-3);margin-top:.12rem;}
+.roleline.gapline{background:var(--agent-soft);}
+
 .toast{position:fixed;left:50%;bottom:1.4rem;transform:translateX(-50%);z-index:80;
   background:var(--ink);color:var(--paper);border-radius:6px;padding:.55rem .95rem;
   font-size:.79rem;line-height:1.55;box-shadow:0 12px 32px -12px rgba(0,0,0,.55);
@@ -840,6 +879,59 @@ function matchBizTerm(q){
   return hit;
 }
 
+
+/* ===== 策略决策规则（R1 映射表 + 场景判定） ===== */
+var SCENES = {
+  new_growth: {
+    name:'新客增量', lever:'触达人数', gapType:'有能力，无该域行为',
+    metrics:['订单量','GMV','MAC'],
+    roles:{
+      qualify:{ desc:'源域（电商）消费等级 ≥ L3', tag:'trade.ecom.consume_level', vals:['L3','L4','L5'] },
+      gap:    { desc:'目标域（生服）无交易记录', tag:'trade.local.is_new', vals:['未核销'] },
+      reach:  { desc:'电商侧近 30 天活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
+      exclude:{ desc:'近 30 天已被生服内容触达', behavior:{ ev:'local.verify', w:30, t:1, mod:'none' } }
+    }},
+  freq_up: {
+    name:'老客频次提升', lever:'复购频次', gapType:'在买，但频次低于潜力',
+    metrics:['订单量','复购率'],
+    roles:{
+      qualify:{ desc:'生服已是成长期/成熟老客', tag:'trade.local.is_new', vals:['成长期','成熟老客'] },
+      gap:    { desc:'生服近期活跃度掉到低活/沉默', tag:'trade.local.activity', vals:['低活','沉默'] },
+      reach:  { desc:'电商侧仍然活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
+      exclude:{ desc:'近 30 天已核销过', behavior:{ ev:'local.verify', w:30, t:1, mod:'none' } }
+    }},
+  awaken: {
+    name:'沉睡用户唤醒', lever:'复购唤回', gapType:'转化过，但流失了',
+    metrics:['订单量','MAC'],
+    roles:{
+      qualify:{ desc:'历史有生服转化', tag:'trade.local.is_new', vals:['成熟老客'] },
+      gap:    { desc:'流失倾向高风险', tag:'trade.cross.churn_risk', vals:['高风险'] },
+      reach:  { desc:'电商侧仍然活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
+      exclude:{ desc:'近 30 天已被唤醒触达', behavior:{ ev:'local.verify', w:30, t:1, mod:'none' } }
+    }},
+  value_up: {
+    name:'单客价值提升', lever:'客单价', gapType:'在买，但买得比潜力便宜',
+    metrics:['GMV','客单价'],
+    roles:{
+      qualify:{ desc:'电商消费等级高（有能力）', tag:'trade.ecom.consume_level', vals:['L4','L5'] },
+      gap:    { desc:'但客单价档位偏低', tag:'trade.ecom.aov_band', vals:['0–50','50–150'] },
+      reach:  { desc:'近 30 天活跃', tag:'trade.ecom.activity', vals:['高活','中活'] },
+      exclude:{ desc:'近 30 天已转化', behavior:{ ev:'ecom.order', w:30, t:1, mod:'none' } }
+    }}
+};
+
+var GOAL_CASES = [
+  { q:'在生服用增场景提升订单量',
+    parsed:{ metric:'订单量', direction:'提升', domain:['生服','电商主端'],
+             window:{ v:30, src:'system_default' }, intent:'投放', scale:'—' },
+    matched:['new_growth','freq_up'],
+    crossDomain:true,
+    evidence:{
+      new_growth:{ lv:'中', text:'同类破圈场景有对照组但未达显著（+0.5% 量级）' },
+      freq_up:{ lv:'强', text:'视频推荐 · 生服人均订单 +1.4012%（有 AB 对照，显著）' }
+    }}
+];
+
 var ROLE_MAX = { ops:3, algo:3, analyst:2 };
 var ROLE_NAME = { ops:'产运', algo:'算法', analyst:'分析师' };
 function lvNum(lv){ return parseInt(lv.slice(1),10); }
@@ -957,6 +1049,15 @@ var elCanvas = document.getElementById('canvas');
 var elPrev = document.getElementById('preview');
 
 var SUGGEST = [
+  { q:'🎯 我想在生服用增场景提升订单量', run:function(){
+      setTimeout(function(){ openStrategy(0); }, 200);
+      return '这是一句<b>纯业务目标</b>——里面<b>一个圈人条件都没有</b>，' +
+        '没法直接翻译成 SQL。<br><br>要先走三层决策：' +
+        '<b>① 目标解析</b>（拆出指标/方向/域/约束）→ ' +
+        '<b>② 场景判定</b>（这个指标该走哪个杠杆）→ ' +
+        '<b>③ 策略生成</b>（查 R1 表得出四段式条件）。<br><br>' +
+        '这一层才是「业务目标 → 维度 → 标签」真正发生的地方。';
+    }},
   { q:'找出生服高潜力但电商低消费的用户', run:function(){
       setTimeout(function(){ openMapping(['高潜','低消费']); }, 200);
       return '这句话里有 <b>2 个业务词需要映射</b>：「高潜」和「低消费」。<br><br>' +
@@ -1015,6 +1116,11 @@ function condHTML(c, zone){
     h += '<div class="cnote warn">⚠ 开放集条件未确认语义映射，' + c.cands.length + ' 个候选待选择</div>';
   } else if(c.note){
     h += '<div class="cnote warn">⚠ ' + esc(c.note) + '</div>';
+  }
+  if(vis && c.roleTag){
+    var RN = { qualify:'资格', gap:'缺口 ★', reach:'可触达', exclude:'排除' };
+    h += '<div class="cnote" style="color:var(--agent)">↳ 四段式角色：<b>' + RN[c.roleTag] + '</b>' +
+      (c.roleTag==='gap' ? '（增量空间的来源，删掉这条策略就废了）' : '') + '</div>';
   }
   if(vis && c.mapFrom){
     h += '<div class="cnote" style="color:var(--agent)">↳ 由业务词「' + esc(c.mapFrom) + '」映射而来，已确认口径</div>';
@@ -1125,7 +1231,7 @@ var FILTERS = [['all','全部'],['sub','订阅'],['snap','快照'],['rule','规�
 
 var BANNERS = {
   build:'<span class="bl">工作台想让你点出来的三件事</span>' +
-    '<b>①</b> <b>说一个业务词试试</b>（高消费 / 高潜 / 流失）——Agent 不替你选标签，而是把候选的口径、分母、覆盖、权限、历史证据摆出来，面板里还有「如果只有 NL-to-SQL 会怎样」的对照。 ' +
+    '<b>①</b> <b>先点第一个示例问句</b>——那是一句纯业务目标，会走「目标解析 → 场景判定 → R1 查表生成四段式」三层决策，这一层才是「业务目标 → 维度 → 标签」真正发生的地方。 ' +
     '<b>②</b> 兴趣类走<b>值级检索</b>：搜「露营」命中的是字段里的取值，不是标签名。确认关只拦 Agent 的推断。 ' +
     '<b>③</b> 权限在圈人之前生效——把角色切成"分析师"，L3 标签会当场失效。',
   assets:'<span class="bl">这一屏解决的是"圈完之后"</span>' +
@@ -1714,6 +1820,156 @@ function behaviorPane(){
 }
 
 
+
+/* ===== 策略决策向导：业务目标 → 场景 → 四段式条件 ===== */
+var stgStep = 1, stgCase = null, stgScene = null, stgSub = 'potential';
+
+function openStrategy(caseIdx){
+  stgCase = GOAL_CASES[caseIdx]; stgStep = 1; stgScene = null; stgSub = 'potential';
+  renderStrategy();
+}
+function stgBar(){
+  var names = ['① 目标解析','② 场景判定','③ 策略生成'];
+  return '<div class="stgbar">' + names.map(function(n,i){
+    var cls = (i+1===stgStep) ? ' on' : ((i+1<stgStep) ? ' done' : '');
+    return '<div class="stgstep' + cls + '">' + n + '</div>';
+  }).join('') + '</div>';
+}
+
+function renderStrategy(){
+  var b = stgBar(), foot = '', p = stgCase.parsed;
+
+  if(stgStep === 1){
+    b += '<div class="mapintro">业务方给的原话是「<span class="ph">' + esc(stgCase.q) +
+      '</span>」——<b>这句话里一个圈人条件都没有</b>。第一步先把它拆成四类元信息，' +
+      '<b>每一项都标出来自原话哪一段，可点回原文核对</b>。</div>';
+    b += '<div style="background:var(--surface);border:1px solid var(--rule);border-radius:5px;padding:.5rem .7rem">';
+    b += '<div class="pfield"><span class="pk">核心指标</span><span class="pv"><b>' + p.metric +
+         '</b><div class="psrc">↳ 来自原话「提升<u>订单量</u>」</div></span></div>';
+    b += '<div class="pfield"><span class="pk">目标方向</span><span class="pv">' + p.direction + '</span></div>';
+    b += '<div class="pfield"><span class="pk">生效业务域</span><span class="pv"><b>' + p.domain.join(' + ') +
+         '</b><div class="psrc">↳ 来自原话「<u>生服</u>用增场景」；电商域由跨域策略引入</div></span></div>';
+    b += '<div class="pfield"><span class="pk">时间窗口</span><span class="pv">近 ' + p.window.v + ' 天' +
+         '<div class="pdef">⚠ 原话未指定，取系统默认值，标记 window_source: system_default，请核对</div></span></div>';
+    b += '<div class="pfield"><span class="pk">人群意图</span><span class="pv">' + p.intent +
+         '<div class="psrc">↳ 默认值，决定后续审批路径</div></span></div>';
+    b += '<div class="pfield"><span class="pk">期望规模</span><span class="pv">' + p.scale +
+         '<div class="psrc">↳ 未指定，由策略层预估后回填</div></span></div>';
+    b += '</div>';
+    b += '<div class="warnbox"><div class="wl">兜底规则</div>' +
+      '若<b>核心指标</b>或<b>业务域</b>缺失，<b>直接中断并回问业务方</b>，不猜测、不用默认值糊过去。' +
+      '本例两项齐全，可进入下一步。</div>';
+    foot = '<span class="fnote">R0 · 元信息提取</span>' +
+      '<button class="btn sec" data-close="1">取消</button>' +
+      '<button class="btn pri" data-stgnext="1">确认解析结果</button>';
+  }
+
+  if(stgStep === 2){
+    b += '<div class="mapintro">指标=<b>' + p.metric + '</b>，命中了 <b>' + stgCase.matched.length +
+      ' 个场景</b>。<b>Agent 不自动挑一个</b>——「提升订单量」既可以走新客增量，也可以走老客频次，' +
+      '这是两批完全不同的人，属于策略判断，必须由人来定。</div>';
+    b += '<div class="optlist">' + stgCase.matched.map(function(k){
+      var sc = SCENES[k], ev = stgCase.evidence[k];
+      return '<button class="scard2' + (stgScene===k?' on':'') + '" data-stgscene="' + k + '">' +
+        '<div class="s1"><span class="snm">' + sc.name + '</span>' +
+        '<span class="slv">杠杆：' + sc.lever + '</span>' +
+        '<span class="evb ' + (ev.lv==='强'?'strong':(ev.lv==='中'?'mid':'none')) + '">' + ev.lv + '证据</span></div>' +
+        '<div class="sgap">缺口本质：' + sc.gapType + '</div>' +
+        '<div class="rt" style="font-family:var(--fm);font-size:.62rem;color:var(--ink-3)">证据：' + ev.text + '</div>' +
+        '</button>';
+    }).join('') + '</div>';
+
+    if(stgScene){
+      b += '<div class="sect" style="margin-top:.5rem">子类型</div><div class="subpick">' +
+        '<button class="subbtn' + (stgSub==='potential'?' on':'') + '" data-stgsub="potential">潜力高价值（反差型）</button>' +
+        '<button class="subbtn warn' + (stgSub==='ready'?' on':'') + '" data-stgsub="ready">现成高价值（叠加型）</button>' +
+        '</div>';
+      if(stgSub === 'ready'){
+        b += '<div class="warnbox" style="background:var(--risk-soft);border-color:var(--risk)">' +
+          '<div class="wl" style="color:var(--risk)">⚠ 使用边界</div>' +
+          '<b>现成高价值是叠加型条件，没有增量空间。</b>适合 VIP 维系、白名单管理、服务分层；' +
+          '<b>不得用于验证策略增量效果</b>——这批人本来就会转化，实验必然不显著，' +
+          '或显著也无法归因到策略。</div>';
+      } else {
+        b += '<div class="warnbox"><div class="wl">反差型</div>' +
+          '条件里必须有一段是「某维度高 <b>AND</b> 目标维度低/空」——' +
+          '<b>这一段就是增量空间的来源，缺了它整个策略退化成"圈一批优质用户"，毫无意义。</b></div>';
+      }
+    }
+    foot = '<span class="fnote">R1 · 场景判定</span>' +
+      '<button class="btn sec" data-stgback="1">上一步</button>' +
+      '<button class="btn pri" data-stgnext="1"' + (stgScene?'':' disabled') + '>生成策略</button>';
+  }
+
+  if(stgStep === 3){
+    var sc = SCENES[stgScene], R = sc.roles, ev = stgCase.evidence[stgScene];
+    b += '<div class="mapintro">查 <b>R1 映射表</b>，' + sc.name +
+      ' 这一行直接给出四段式各角色该用哪个字段——<b>这一步是查表，不是模型推理</b>。</div>';
+    b += '<div style="background:var(--surface);border:1px solid var(--rule);border-radius:5px;overflow:hidden">';
+    [['qualify','资格'],['gap','缺口 ★'],['reach','可触达'],['exclude','排除']].forEach(function(x){
+      var k = x[0], r = R[k];
+      b += '<div class="roleline' + (k==='gap'?' gapline':'') + '">' +
+        '<span class="rk ' + k + '">' + x[1] + '</span>' +
+        '<span class="rd">' + r.desc +
+          '<div class="rt">' + (r.tag || ('行为：' + r.behavior.ev + ' · 近' + r.behavior.w + '天')) + '</div></span>' +
+        '<span></span></div>';
+    });
+    b += '</div>';
+
+    b += '<div class="warnbox"><div class="wl">R2 · 缺口判定公式校验</div>' +
+      '<code style="font-family:var(--fm);font-size:.68rem">(来源.字段 ∈ 高优区间) AND (目标.对应字段 ∈ 低优区间 OR IS NULL)</code><br>' +
+      '本例代入：来源=<b>电商</b>，目标=<b>生服</b> → <b>✓ 符合公式，缺口段非空</b></div>';
+
+    if(stgCase.crossDomain){
+      b += '<div class="warnbox" style="background:var(--gov-soft);border-color:var(--gov)">' +
+        '<div class="wl" style="color:var(--gov)">跨域实现路径判定</div>' +
+        '组合模式：<b>潜力挖掘型（差集）</b><br>' +
+        '无预构建跨域字段覆盖该概念 → <b>降级走路径②：各域分别圈选 + 集合运算</b><br>' +
+        '⚠ 经账号层 ID Mapping（约 85%），<b>实际可触达可能低估 ~15%</b>，' +
+        '且未打通用户偏向低活跃/单端——<b>而这恰恰是破圈型最想触达的那批人</b>。</div>';
+    }
+
+    b += '<div class="contract"><div class="cl2">证据等级 · ' + ev.lv + '</div>' + ev.text +
+      (ev.lv==='强' ? '<br><b>有 AB 对照且正显著，可直接作为推荐依据。</b>' :
+       '<br><b>未达显著，标注"样本量可能不足"，不作强背书。</b>') + '</div>';
+
+    foot = '<span class="fnote">生成后可在画布上继续调整</span>' +
+      '<button class="btn sec" data-stgback="1">上一步</button>' +
+      '<button class="btn pri" data-stgdone="1">落入条件画布</button>';
+  }
+
+  openModal('策略决策 · 业务目标转圈人条件',
+    stgStep===1?'第一层 · 目标解析':(stgStep===2?'第二层 · 场景与约束拆解':'第三层 · 人群策略'), b, foot);
+}
+
+function commitStrategy(){
+  var sc = SCENES[stgScene], R = sc.roles, added = [];
+  ['qualify','gap','reach'].forEach(function(k){
+    var r = R[k];
+    var tg = ENUMS.filter(function(x){ return x.id === r.tag; })[0];
+    if(!tg) return;
+    var c = mkEnum(tg, r.vals.filter(function(v){
+      return tg.vals.some(function(tv){ return tv[0] === v; }); }));
+    if(!c.reach){ return; }
+    c.roleTag = k;
+    S.groups[0].conds.push(c);
+    added.push(c.text);
+  });
+  var ex = R.exclude.behavior;
+  if(ex){
+    var bc = mkBehavior(ex.ev, ex.w, ex.t, ex.mod, false);
+    bc.roleTag = 'exclude';
+    S.excludes.push(bc);
+    added.push('排除：' + bc.text);
+  }
+  closeModal();
+  say('a', '已按 <b>' + sc.name + '</b>（' + sc.lever + '杠杆）生成四段式条件：<br>' +
+    added.map(function(t){ return '· ' + esc(t); }).join('<br>') +
+    '<br><br><b>注意「缺口」那一段</b>——去掉它，这就退化成"圈一批优质用户"，' +
+    '实验必然做不出增量。这一段才是整个策略的灵魂。');
+  render();
+}
+
 /* ===== 语义映射面板：业务语言 → 候选资产 ===== */
 var mapTerms = [], mapIdx = 0, mapSel = {}, mapAfter = null;
 
@@ -2001,6 +2257,15 @@ document.addEventListener('click', function(e){
   }
 
   /* picker */
+  if(d.stgnext){
+    if(stgStep < 3){ stgStep++; renderStrategy(); }
+    return;
+  }
+  if(d.stgback){ stgStep--; renderStrategy(); return; }
+  if(d.stgscene){ stgScene = d.stgscene; renderStrategy(); return; }
+  if(d.stgsub){ stgSub = d.stgsub; renderStrategy(); return; }
+  if(d.stgdone){ commitStrategy(); return; }
+  if(d.stggo !== undefined){ openStrategy(+d.stggo); return; }
   if(d.cand !== undefined){
     var tm = mapTerms[mapIdx], ix = +d.cand, arr = mapSel[tm];
     var p = arr.indexOf(ix); if(p>-1) arr.splice(p,1); else arr.push(ix);
