@@ -1031,10 +1031,11 @@ var GOAL_CASES = [
   { q:'生服 Q4 要提升到店餐饮的订单量',
     parsed:{ metric:'订单量', direction:'提升', domain:['生服'], category:'到店餐饮',
              period:{ v:'Q4（10–12月）', src:'user_specified' }, intent:'投放', scale:'—' },
-    matched:['dining_new'],
+    matched:['dining_new','freq_up'],
     crossDomain:true,
     evidence:{
-      dining_new:{ lv:'弱', text:'仅历史上有类似跨域破圈的前后对比（无对照组），不作强背书' }
+      dining_new:{ lv:'弱', text:'仅历史上有类似跨域破圈的前后对比（无对照组），不作强背书' },
+      freq_up:{ lv:'强', text:'到店餐饮复购提醒 · 生服人均订单 +1.2%（有 AB 对照，显著）' }
     }}
 ];
 
@@ -2036,9 +2037,13 @@ function renderStrategy(){
   }
 
   if(stgStep === 2){
+    var scNames = stgCase.matched.map(function(k){ return SCENES[k].name; });
+    var introTail = stgCase.matched.length > 1
+      ? '<b>Agent 不自动挑一个</b>——' + scNames.map(function(n){ return '「' + n + '」'; }).join('和') +
+        '是两批完全不同的人，属于策略判断，必须由人来定。'
+      : '当前案例库里，这个「指标+品类」组合只配置了这一条场景规则，暂无其他候选可供选择。';
     b += '<div class="mapintro">指标=<b>' + p.metric + '</b>，命中了 <b>' + stgCase.matched.length +
-      ' 个场景</b>。<b>Agent 不自动挑一个</b>——「提升订单量」既可以走新客增量，也可以走老客频次，' +
-      '这是两批完全不同的人，属于策略判断，必须由人来定。</div>';
+      ' 个场景</b>。' + introTail + '</div>';
     b += '<div class="optlist">' + stgCase.matched.map(function(k){
       var sc = SCENES[k], ev = stgCase.evidence[k];
       return '<button class="scard2' + (stgScene===k?' on':'') + '" data-stgscene="' + k + '">' +
