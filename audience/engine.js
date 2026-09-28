@@ -84,8 +84,8 @@ function select(t,ids){
 }
 function validation(t){const errors=[];if(!t.confirmed||!t.strategyConfirmed)errors.push('需求或方案尚未确定');if(t.blocker)errors.push(blockers[t.blocker]||t.blocker);if(!t.conditions.length)errors.push('尚无核心条件');if(t.conditions.some(c=>!c.value.trim()))errors.push('核心条件取值缺失');if(t.conditions.some(c=>c.permission!=='演示可用'))errors.push('资产权限不可用');if(t.scope==='ldmp'&&t.fields.domain.value!=='生服')errors.push('超出 LDMP 生服范围');return errors;}
 function executable(t){return t.conditionConfirmed&&validation(t).length===0;}
-function snapshot(t,reason){return {version:t.version,reason,at:new Date().toISOString(),query:t.query,scenario:t.scenario,title:t.title,type:t.type,seedRef:t.seedRef,fields:clone(t.fields),decisions:clone(t.decisions||{}),interactionVersion:t.interactionVersion,strategy:clone(t.strategy),conditions:clone(t.conditions),result:clone(t.result),confirmed:t.confirmed,strategyConfirmed:t.strategyConfirmed,conditionConfirmed:t.conditionConfirmed};}
-function revise(t,level,reason){t.versions.push(snapshot(t,reason));t.version++;t.metrics.revisions++;t.result=null;t.archived=false;t.conditionConfirmed=false;t.stage=level;if(level<=1){t.confirmed=false;t.strategyConfirmed=false;t.strategy=null;t.conditions=[];}else if(level<=2){t.strategyConfirmed=false;}log(t,reason+'；下游结果待重算');}
+function snapshot(t,reason){return {version:t.version,reason,at:new Date().toISOString(),query:t.query,scenario:t.scenario,title:t.title,type:t.type,seedRef:t.seedRef,handoffs:clone(t.handoffs||[]),activity:clone(t.activity||[]),fields:clone(t.fields),decisions:clone(t.decisions||{}),interactionVersion:t.interactionVersion,strategy:clone(t.strategy),conditions:clone(t.conditions),result:clone(t.result),confirmed:t.confirmed,strategyConfirmed:t.strategyConfirmed,conditionConfirmed:t.conditionConfirmed};}
+function revise(t,level,reason){cancelActivity(t,'方案已修改，旧操作取消');t.versions.push(snapshot(t,reason));t.version++;t.metrics.revisions++;t.result=null;t.archived=false;t.conditionConfirmed=false;t.stage=level;if(level<=1){t.confirmed=false;t.strategyConfirmed=false;t.strategy=null;t.conditions=[];}else if(level<=2){t.strategyConfirmed=false;}log(t,reason+'；下游结果待重算');}
 function sql(t){
  const safe=v=>String(v).replace(/[\r\n]/g,' ');
  const comments=t.conditions.map((c,i)=>'-- C'+(i+1)+' '+safe(c.group)+' | '+safe(c.name)+' | '+safe(c.value)).join('\n');
@@ -97,5 +97,32 @@ function sql(t){
 function run(t,fail){if(!executable(t))throw Error('核心条件未通过校验，禁止执行');if(t.attempts>=3)throw Error('连续三轮未达标，已停止自动尝试，请转人工');t.stage=4;const run={id:'DEMO-RUN-'+(t.runs.length+1),version:t.version,at:new Date().toISOString(),sql:sql(t),status:fail?'失败':'完成',reason:fail?blockers[fail]||fail:null};t.runs.push(run);if(fail){t.attempts++;log(t,run.reason);return run;}t.attempts=0;t.result={version:t.version,runId:run.id,size:12840+t.conditions.length*237,coverage:87,seed:t.seedRef?92:null,excluded:1360,missing:42,partition:'DEMO / 2026-09-27',sql:run.sql,approved:false,sampleIds:['DEMO-USER-001','DEMO-USER-002','DEMO-USER-003']};log(t,'模拟执行完成，等待业务复核');return run;}
 function approve(t){if(!t.result||t.result.version!==t.version||t.blocker)throw Error('无当前有效结果');t.result.approved=true;t.stage=5;log(t,'业务复核通过，MVP 方案完成（演示）');}
 function restore(t,v){const target=t.versions.find(x=>x.version===v);if(!target)throw Error('版本不存在');revise(t,1,'从 v'+v+'恢复为新版本');for(const key of ['query','scenario','title','type','seedRef','interactionVersion'])if(target[key]!==undefined)t[key]=clone(target[key]);t.fields=clone(target.fields);t.decisions=clone(target.decisions||{});Object.values(t.fields).forEach(f=>{if(f.status==='已确认')f.status='待确认';});}
-const api={scenarios,featured,questions,answer,blockers,clone,classify,detect,create,log,missing,confirm,select,validation,executable,snapshot,revise,run,approve,restore,sql};if(typeof module!=='undefined')module.exports=api;root.AudienceEngine=api;
+// Public operation receipts: concise evidence and outputs, never hidden model reasoning.
+function beginActivity(t,title,items){
+ const activity={id:'DEMO-ACT-'+(t.activity?.length||0)+'-'+Date.now().toString(36),version:t.version,title,status:'running',started:new Date().toISOString(),items:items.map((x,i)=>({id:i,title:x.title,owner:x.owner||'圈人 Agent',status:'pending',summary:'',artifact:x.artifact??null}))};
+ (t.activity||(t.activity=[])).push(activity);return activity;
+}
+function updateActivity(t,id,index,status,summary=''){
+ const a=t.activity?.find(x=>x.id===id);if(!a||a.version!==t.version||a.status==='cancelled')return false;
+ a.items[index].status=status;a.items[index].summary=summary;a.items[index].at=new Date().toISOString();
+ if(status==='blocked'||status==='waiting'){a.status=status;for(const next of a.items.slice(index+1))if(next.status==='pending')next.summary='上游未完成，暂不执行';}
+ else if(a.items.every(x=>x.status==='done'))a.status='done';
+ return true;
+}
+function cancelActivity(t,reason){for(const a of t.activity||[])if(a.status==='running'){a.status='cancelled';a.reason=reason;for(const item of a.items)if(item.status==='running'||item.status==='pending')item.status='cancelled';}}
+function prepareHandoff(t){
+ if(!executable(t))throw Error('执行条件未通过，不能委托用户理解 Agent');
+ const requestId=t.id+'-V'+t.version+'-REQ-'+(t.handoffs?.length||0);
+ const req={requestId,taskId:t.id,version:t.version,idempotencyKey:requestId,from:'圈人 Agent',to:'用户理解 Agent',status:'prepared',demo:true,input:{definition:t.fields.definition.value,window:t.fields.window.value,domain:t.fields.domain.value,conditions:clone(t.conditions),seedRef:t.seedRef||null,riskPolicy:'禁止放宽核心条件；缺口按结构化原因返回'},response:null};
+ (t.handoffs||(t.handoffs=[])).push(req);log(t,'准备执行委托 '+requestId);return req;
+}
+function acceptHandoff(t,receipt){
+ const req=t.handoffs?.find(x=>x.requestId===receipt.requestId);
+ if(!req||receipt.taskId!==t.id||receipt.version!==t.version||req.version!==t.version)throw Error('回执与当前任务版本不一致，已拒绝采用');
+ if(!['prepared','running'].includes(req.status))throw Error('该委托已结束，禁止重复采用回执');
+ if(receipt.status==='failed'){req.status='failed';req.response=clone(receipt);return req;}
+ if(receipt.status!=='completed'||!receipt.sql||receipt.resultVersion!==t.version)throw Error('执行回执缺少当前版本 SQL 或结果');
+ req.status='completed';req.response=clone(receipt);log(t,'采用当前版本执行回执 '+req.requestId);return req;
+}
+const api={beginActivity,updateActivity,cancelActivity,prepareHandoff,acceptHandoff,scenarios,featured,questions,answer,blockers,clone,classify,detect,create,log,missing,confirm,select,validation,executable,snapshot,revise,run,approve,restore,sql};if(typeof module!=='undefined')module.exports=api;root.AudienceEngine=api;
 })(typeof window!=='undefined'?window:globalThis);
