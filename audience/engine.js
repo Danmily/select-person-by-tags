@@ -37,7 +37,7 @@ const questionSpecs={
  newCustomer:{title:'本品牌新客，回溯多久没有购买？',why:'近90天未购和历史从未购买是两种不同的新客定义；历史数据覆盖需要再核验。',choices:['近365天无本品牌成交','可用完整历史中无本品牌成交；覆盖不足时阻断']},
  dormant:{title:'多久没买，才算进入召回范围？',why:'“最近一段时间”不能自动等于流失，业务需要定义最近未购窗口。',choices:['最近30天没有该品类成交','最近60天没有该品类成交']},
  cycle:{title:'按什么间隔识别补货候选人群？',why:'买过商品不能直接证明已经用完；这里只圈候选人群，不推断真实用量。',choices:['距最近购买30至60天（示例，业务需核实）','距最近购买60至90天（示例，业务需核实）']},
- area:{title:'门店能服务到哪个区域？',why:'只知道城市仍无法判断门店可达性；距离方案必须有获准的位置与门店资产。',choices:['上海市范围，先做城市级兴趣人群','门店周边3公里（示例，需补门店标识和获准位置资产）']},
+ area:{title:'门店能服务到哪个区域？',why:'只知道城市仍无法判断门店可达性；距离方案必须有获准的位置与门店资产。',choices:['按原话指定城市，先做城市级兴趣人群（城市未明确时请自行补充）','门店周边3公里（示例，需补门店标识和获准位置资产）']},
  store:{title:'用于距离圈选的门店标识是什么？',why:'没有门店基准位置，无法执行周边距离条件。演示请使用 DEMO- 开头的标识。',choices:[]},
  crossBasis:{title:'两域的高低消费各采用什么口径？',why:'电商低消费不能直接和生服高消费共用同一个分层标准。',choices:['电商 L1/L2 且生服 L4/L5；分别采用各域定义（示例）']},
  definition:{title:'还缺哪条关键的人群入选标准？',why:'目前没有足够的业务定义，系统不能自行替你决定圈谁。',choices:[],field:'definition'},
@@ -62,14 +62,40 @@ function legacyMissing(t){return ['object','window','domain','definition'].filte
 function log(t,action){t.history.push({at:new Date().toISOString(),version:t.version,action,actor:'当前演示用户'});}
 function missing(t){return questions(t).map(q=>q.id);}
 function confirm(t){if(!['直接圈人','复用历史策略','分析转圈人'].includes(t.type))throw Error('该请求不在当前圈人执行范围');if(missing(t).length)throw Error('请补齐会改变人群结果的关键口径');if(t.scope==='ldmp'&&t.fields.domain.value!=='生服')throw Error('LDMP 演示仅限生服资产，请回门户创建其他域任务');t.confirmed=true;t.stage=2;log(t,'按当前理解生成方案；明确原话与业务决策已保留');}
-function select(t,ids){if(!t.confirmed)throw Error('请先确认需求');if(!ids.length)throw Error('请选择策略');t.strategy={ids,note:'',evidence:scenarios[t.scenario].source};t.strategyConfirmed=true;t.stage=3;t.conditions=scenarios[t.scenario].fields.map((name,i)=>({id:'DEMO-ASSET-'+t.scenario+'-'+i,name,domain:t.fields.domain.value==='跨域'?(i%2?'生服':'电商'):t.fields.domain.value,owner:'演示供应方',assetVersion:'demo.1',updated:'2026-09-28',definition:t.fields.definition.value,group:'必须满足',operator:'符合',value:t.fields.definition.value,core:true,permission:'演示可用'}));t.conditions.push({id:'DEMO-GUARD',name:'营销授权与业务排除',domain:'平台',owner:'演示治理规则',assetVersion:'demo.1',updated:'2026-09-28',definition:t.fields.exclude.value,group:'排除',operator:'排除',value:t.fields.exclude.value,core:true,locked:true,permission:'演示可用'});t.conditions.unshift({id:'DEMO-SIGNAL',name:'策略证据强度',domain:t.fields.domain.value,owner:'演示策略配置',assetVersion:'demo.1',updated:'2026-09-28',definition:'候选策略对应的示例信号范围，仍需确认',group:'必须满足',operator:'符合',value:ids.map(id=>({conservative:'强信号',balanced:'中强信号',explore:'弱信号待验证',direct:'业务完整定义'}[id]||id)).join(' 或 '),core:true,permission:'演示可用'});t.conditionConfirmed=false;log(t,'策略已确认，构建演示条件');}
+function select(t,ids){
+ if(!t.confirmed)throw Error('请先确认需求');if(!ids.length)throw Error('请选择策略');
+ t.strategy={ids,note:'',evidence:scenarios[t.scenario].source};t.strategyConfirmed=true;t.stage=3;
+ const field=(name,value,group='必须满足',locked=false)=>({id:'DEMO-ASSET-'+t.scenario+'-'+t.conditions.length,name,domain:t.fields.domain.value,owner:'演示资产供应方',assetVersion:'demo.1',updated:new Date().toISOString().slice(0,10),definition:value,group,operator:group==='排除'?'排除':'符合',value,core:true,locked,permission:'演示可用'});
+ t.conditions=[];
+ if(t.scenario==='brand'){
+  const category=/服饰|羽绒服/.test(t.query)?'服饰':'目标类目';
+  t.conditions.push(field(category+'成交记录','近 '+t.fields.window.value+' 天内满足业务原话中的购买条件'));
+  t.conditions.push(field('消费能力口径',t.decisions?.spending||'按业务原话明确的消费条件；未要求时不额外加限制'));
+  t.conditions.push(field('商品兴趣行为',t.decisions?.interest||'按业务原话中的搜索、收藏、加购等明确行为条件','任一满足'));
+ }else{
+  scenarios[t.scenario].fields.forEach(name=>t.conditions.push(field(name,'按已确认定义：'+t.fields.definition.value)));
+ }
+ const signal=ids.includes('balanced')||ids.includes('explore')?'沿用全部业务硬条件；不额外限制有效记录次数':'核心信号至少有2次有效记录（保守方案演示口径）';
+ t.conditions.push(field('策略信号范围',signal));
+ if(ids.includes('explore')){const c=field('探索分层标记','在符合硬条件的人群内按辅助偏好标记分层，不扩大入选范围');c.core=false;c.locked=true;c.group='辅助分层';t.conditions.push(c);}
+ t.conditions.push(field('业务排除',t.fields.exclude.value,'排除'));
+ const guard=field('营销授权与治理规则','排除未获营销授权或不满足平台治理要求的记录','排除',true);guard.domain='平台';guard.owner='演示治理规则';t.conditions.push(guard);
+ t.conditionConfirmed=false;log(t,'策略已确认，构建演示条件');
+}
 function validation(t){const errors=[];if(!t.confirmed||!t.strategyConfirmed)errors.push('需求或方案尚未确定');if(t.blocker)errors.push(blockers[t.blocker]||t.blocker);if(!t.conditions.length)errors.push('尚无核心条件');if(t.conditions.some(c=>!c.value.trim()))errors.push('核心条件取值缺失');if(t.conditions.some(c=>c.permission!=='演示可用'))errors.push('资产权限不可用');if(t.scope==='ldmp'&&t.fields.domain.value!=='生服')errors.push('超出 LDMP 生服范围');return errors;}
 function executable(t){return t.conditionConfirmed&&validation(t).length===0;}
-function snapshot(t,reason){return {version:t.version,reason,at:new Date().toISOString(),fields:clone(t.fields),decisions:clone(t.decisions||{}),interactionVersion:t.interactionVersion,strategy:clone(t.strategy),conditions:clone(t.conditions),result:clone(t.result),confirmed:t.confirmed,strategyConfirmed:t.strategyConfirmed,conditionConfirmed:t.conditionConfirmed};}
+function snapshot(t,reason){return {version:t.version,reason,at:new Date().toISOString(),query:t.query,scenario:t.scenario,title:t.title,type:t.type,seedRef:t.seedRef,fields:clone(t.fields),decisions:clone(t.decisions||{}),interactionVersion:t.interactionVersion,strategy:clone(t.strategy),conditions:clone(t.conditions),result:clone(t.result),confirmed:t.confirmed,strategyConfirmed:t.strategyConfirmed,conditionConfirmed:t.conditionConfirmed};}
 function revise(t,level,reason){t.versions.push(snapshot(t,reason));t.version++;t.metrics.revisions++;t.result=null;t.archived=false;t.conditionConfirmed=false;t.stage=level;if(level<=1){t.confirmed=false;t.strategyConfirmed=false;t.strategy=null;t.conditions=[];}else if(level<=2){t.strategyConfirmed=false;}log(t,reason+'；下游结果待重算');}
-function sql(t){const cond=JSON.stringify({window:t.fields.window.value,strategy:t.strategy,conditions:t.conditions.map(c=>({group:c.group,asset:c.id,value:c.value}))});return '-- 演示 SQL · 无真实表映射，不可用于生产\n-- task '+t.id+' / v'+t.version+'\n-- 确认条件 '+cond.replace(/[\r\n]/g,' ')+'\nSELECT demo_user_id\nFROM demo_authorized_audience\nWHERE demo_rule_version = '+t.version+';';}
+function sql(t){
+ const safe=v=>String(v).replace(/[\r\n]/g,' ');
+ const comments=t.conditions.map((c,i)=>'-- C'+(i+1)+' '+safe(c.group)+' | '+safe(c.name)+' | '+safe(c.value)).join('\n');
+ const indices=group=>t.conditions.map((c,i)=>c.group===group?'condition_'+(i+1)+' = TRUE':null).filter(Boolean);
+ const and=indices('必须满足').concat(indices('频控'));const or=indices('任一满足');const excluded=indices('排除').concat(indices('黑白名单'));
+ const predicates=and.concat(or.length?'('+or.join(' OR ')+')':[]).concat(excluded.length?'NOT ('+excluded.join(' OR ')+')':[]);
+ return '-- 演示 SQL · 无真实表映射，不可用于生产\n-- task '+t.id+' / v'+t.version+'\n-- condition_N 为演示布尔字段，实际生产需真实资产映射\n'+comments+'\n\nWITH eligible_users AS (\n  SELECT demo_user_id\n  FROM demo_authorized_audience\n  WHERE '+(predicates.join('\n    AND ')||'FALSE')+'\n)\nSELECT DISTINCT demo_user_id\nFROM eligible_users;';
+}
 function run(t,fail){if(!executable(t))throw Error('核心条件未通过校验，禁止执行');if(t.attempts>=3)throw Error('连续三轮未达标，已停止自动尝试，请转人工');t.stage=4;const run={id:'DEMO-RUN-'+(t.runs.length+1),version:t.version,at:new Date().toISOString(),sql:sql(t),status:fail?'失败':'完成',reason:fail?blockers[fail]||fail:null};t.runs.push(run);if(fail){t.attempts++;log(t,run.reason);return run;}t.attempts=0;t.result={version:t.version,runId:run.id,size:12840+t.conditions.length*237,coverage:87,seed:t.seedRef?92:null,excluded:1360,missing:42,partition:'DEMO / 2026-09-27',sql:run.sql,approved:false,sampleIds:['DEMO-USER-001','DEMO-USER-002','DEMO-USER-003']};log(t,'模拟执行完成，等待业务复核');return run;}
 function approve(t){if(!t.result||t.result.version!==t.version||t.blocker)throw Error('无当前有效结果');t.result.approved=true;t.stage=5;log(t,'业务复核通过，MVP 方案完成（演示）');}
-function restore(t,v){const target=t.versions.find(x=>x.version===v);if(!target)throw Error('版本不存在');revise(t,1,'从 v'+v+'恢复为新版本');t.fields=clone(target.fields);t.decisions=clone(target.decisions||{});Object.values(t.fields).forEach(f=>{if(f.status==='已确认')f.status='待确认';});}
+function restore(t,v){const target=t.versions.find(x=>x.version===v);if(!target)throw Error('版本不存在');revise(t,1,'从 v'+v+'恢复为新版本');for(const key of ['query','scenario','title','type','seedRef','interactionVersion'])if(target[key]!==undefined)t[key]=clone(target[key]);t.fields=clone(target.fields);t.decisions=clone(target.decisions||{});Object.values(t.fields).forEach(f=>{if(f.status==='已确认')f.status='待确认';});}
 const api={scenarios,featured,questions,answer,blockers,clone,classify,detect,create,log,missing,confirm,select,validation,executable,snapshot,revise,run,approve,restore,sql};if(typeof module!=='undefined')module.exports=api;root.AudienceEngine=api;
 })(typeof window!=='undefined'?window:globalThis);
