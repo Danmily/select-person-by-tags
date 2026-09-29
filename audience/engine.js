@@ -63,7 +63,7 @@ function log(t,action){t.history.push({at:new Date().toISOString(),version:t.ver
 function missing(t){return questions(t).map(q=>q.id);}
 function confirm(t){if(!['直接圈人','复用历史策略','分析转圈人'].includes(t.type))throw Error('该请求不在当前圈人执行范围');if(missing(t).length)throw Error('请补齐会改变人群结果的关键口径');if(t.scope==='ldmp'&&t.fields.domain.value!=='生服')throw Error('LDMP 演示仅限生服资产，请回门户创建其他域任务');t.confirmed=true;t.stage=2;log(t,'按当前理解生成方案；明确原话与业务决策已保留');}
 function select(t,ids){
- if(!t.confirmed)throw Error('请先确认需求');if(!ids.length)throw Error('请选择策略');
+ if(!t.confirmed)throw Error('请先确认需求');if(!ids.length)throw Error('请选择策略');if(ids.includes('balanced')&&ids.includes('conservative'))throw Error('标准口径与窄口径只能选择一种');
  t.strategy={ids,note:'',evidence:scenarios[t.scenario].source};t.strategyConfirmed=true;t.stage=3;
  const field=(name,value,group='必须满足',locked=false)=>({id:'DEMO-ASSET-'+t.scenario+'-'+t.conditions.length,name,domain:t.fields.domain.value,owner:'演示资产供应方',assetVersion:'demo.1',updated:new Date().toISOString().slice(0,10),definition:value,group,operator:group==='排除'?'排除':'符合',value,core:true,locked,permission:'演示可用'});
  t.conditions=[];
@@ -75,11 +75,12 @@ function select(t,ids){
  }else{
   scenarios[t.scenario].fields.forEach(name=>t.conditions.push(field(name,'按已确认定义：'+t.fields.definition.value)));
  }
- const signal=ids.includes('balanced')||ids.includes('explore')?'沿用全部业务硬条件；不额外限制有效记录次数':'核心信号至少有2次有效记录（保守方案演示口径）';
+ const signal=!ids.includes('conservative')?'沿用全部业务硬条件；不额外限制有效记录次数':'核心信号至少有2次有效记录（保守方案演示口径）';
  t.conditions.push(field('策略信号范围',signal));
  if(ids.includes('explore')){const c=field('探索分层标记','在符合硬条件的人群内按辅助偏好标记分层，不扩大入选范围');c.core=false;c.locked=true;c.group='辅助分层';t.conditions.push(c);}
  t.conditions.push(field('业务排除',t.fields.exclude.value,'排除'));
  const guard=field('营销授权与治理规则','排除未获营销授权或不满足平台治理要求的记录','排除',true);guard.domain='平台';guard.owner='演示治理规则';t.conditions.push(guard);
+ if(t.templateConditions?.length){const controls=t.conditions.filter(c=>['策略信号范围','探索分层标记'].includes(c.name));t.conditions=clone(t.templateConditions).filter(c=>!['策略信号范围','探索分层标记'].includes(c.name)).concat(controls);}
  t.conditionConfirmed=false;log(t,'策略已确认，构建演示条件');
 }
 function validation(t){const errors=[];if(!t.confirmed||!t.strategyConfirmed)errors.push('需求或方案尚未确定');if(t.blocker)errors.push(blockers[t.blocker]||t.blocker);if(!t.conditions.length)errors.push('尚无核心条件');if(t.conditions.some(c=>!c.value.trim()))errors.push('核心条件取值缺失');if(t.conditions.some(c=>c.permission!=='演示可用'))errors.push('资产权限不可用');if(t.scope==='ldmp'&&t.fields.domain.value!=='生服')errors.push('超出 LDMP 生服范围');return errors;}
@@ -124,5 +125,12 @@ function acceptHandoff(t,receipt){
  if(receipt.status!=='completed'||!receipt.sql||receipt.resultVersion!==t.version)throw Error('执行回执缺少当前版本 SQL 或结果');
  req.status='completed';req.response=clone(receipt);log(t,'采用当前版本执行回执 '+req.requestId);return req;
 }
-const api={beginActivity,updateActivity,cancelActivity,prepareHandoff,acceptHandoff,scenarios,featured,questions,answer,blockers,clone,classify,detect,create,log,missing,confirm,select,validation,executable,snapshot,revise,run,approve,restore,sql};if(typeof module!=='undefined')module.exports=api;root.AudienceEngine=api;
+function recordEvidence(t,input){
+ if(!t.result?.approved||t.result.version!==t.version)throw Error('请先复核当前版本的人群结果');
+ const keys=['experiment','metric','control','treatment','period','source','conclusion'];
+ if(keys.some(k=>typeof input[k]!=='string'||!input[k].trim()))throw Error('请补齐实验标识、指标、两组结果、周期、来源和结论');
+ const entry={version:t.version,at:new Date().toISOString(),kind:'业务回填，未自动核验'};for(const key of keys)entry[key]=input[key].trim();
+ (t.evidence||(t.evidence=[])).push(entry);log(t,'关联业务效果记录，未自动认定因果收益');return entry;
+}
+const api={recordEvidence,beginActivity,updateActivity,cancelActivity,prepareHandoff,acceptHandoff,scenarios,featured,questions,answer,blockers,clone,classify,detect,create,log,missing,confirm,select,validation,executable,snapshot,revise,run,approve,restore,sql};if(typeof module!=='undefined')module.exports=api;root.AudienceEngine=api;
 })(typeof window!=='undefined'?window:globalThis);
