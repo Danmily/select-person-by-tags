@@ -162,3 +162,49 @@
 @container audience-shell (max-width:560px){.aud .aud-process-card ol{grid-template-columns:1fr!important}.aud .aud-process-card li small{display:none}.aud .aud-working-area .aud-chat-stream{padding:16px 10px}.aud .aud-working-area .aud-drawer-body{padding:14px}.aud .aud-scope-option{padding:12px}}
 .aud details.aud-process-card{padding:0;margin:0 0 20px}.aud details.aud-process-card>summary{padding:12px 15px;color:#69778e;border:0;list-style:none;font-size:12px}.aud details.aud-process-card>summary::after{display:none}.aud details.aud-process-card>summary span{font-size:11px;color:#8b94a5}.aud details.aud-process-card[open]>summary{border-bottom:1px solid #e7ebf3}
 .aud .aud-result-intro{padding:0 0 16px}.aud .aud-result-intro h3{font-size:16px;margin-bottom:12px}.aud .aud-result-intro>p{font-size:13px;line-height:1.9;color:#526079}.aud .aud-result-facts{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}.aud .aud-result-facts span{font-size:11px;padding:4px 7px;background:#f1effc;border-radius:5px;color:#73658f}.aud .aud-result-intro>p.muted{font-size:11px;color:#8893a5}
+/* 门户标签名 + 原始含义 */
+.aud .aud-tag-origin{margin-left:6px;font-size:11px;color:var(--am);font-weight:400}
+/* 宽 / 窄口径 */
+.aud .aud-scope-size{font-size:12px;color:var(--ab);font-weight:600;white-space:nowrap}
+.aud .aud-scope-diff{display:grid;gap:4px;margin:8px 0 0;font-size:12px}
+.aud .aud-scope-diff div{display:grid;grid-template-columns:34px 1fr;gap:6px}
+.aud .aud-scope-diff dt{color:var(--am)}
+.aud .aud-scope-diff dd{margin:0;color:#3d4960}
+.aud .aud-scope-option>div{flex:1;min-width:0}
+.aud .aud-scope-note{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0}
+/* 缺权限卡 */
+.aud .aud-perm-card{border:1px solid #f2dfb9;background:#fffbf3;border-radius:10px;padding:14px 16px;margin:12px 0}
+.aud .aud-perm-card ul{list-style:none;padding:0;margin:10px 0;display:grid;gap:6px}
+.aud .aud-perm-card li{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #f0e6d2;border-radius:8px;padding:8px 10px;font-size:13px}
+.aud .aud-perm-card li span:last-child{margin-left:auto;font-size:12px;color:#8b6b34}
+.aud .aud-perm-card .action-footer{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+/* 策略依据 */
+.aud .aud-basis-flow{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.aud .aud-basis-flow>li{position:relative;padding:0 0 14px 18px;border-left:2px solid #dfe6f5;margin-left:5px}
+.aud .aud-basis-flow>li:last-child{border-left-color:transparent}
+.aud .aud-basis-flow>li:before{content:"";position:absolute;left:-6px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--ab)}
+.aud .aud-basis-flow>li>span{font-size:12px;font-weight:600;color:var(--ab)}
+.aud .aud-basis-flow p{font-size:13px;margin-top:2px}
+.aud .aud-basis-tags{display:grid;gap:8px;margin-top:6px}
+.aud .aud-basis-tags>div{border:1px solid var(--al);border-radius:8px;padding:8px 10px}
+.aud .aud-basis-tags em{font-style:normal;font-size:11px;color:#7867a3;margin-right:6px}
+.aud .aud-basis-tags p{font-size:12px;color:var(--am)}
+.aud .aud-compare{width:100%;border-collapse:collapse;font-size:12px}
+.aud .aud-compare th,.aud .aud-compare td{border:1px solid var(--al);padding:8px;text-align:left;vertical-align:top}
+.aud .aud-compare tbody th{color:var(--am);font-weight:500;width:64px;background:#fafbfd}
+.aud .aud-compare .on{background:#f3f7ff}
+.aud .aud-compare thead .on{color:var(--ab)}
+.aud .aud-past-cases{display:grid;gap:8px}
+.aud .aud-past-cases article{border:1px solid var(--al);border-radius:8px;padding:10px 12px}
+.aud .aud-past-gain{color:#1f8a4c;font-weight:600;margin:4px 0 2px}
+.aud .aud-past-cases small{color:var(--am);font-size:11px}
+/* 人群构成与分层 */
+.aud .aud-dist,.aud .aud-layering{border:1px solid var(--al);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.aud .aud-dist h3 small,.aud .aud-layering h3 small,.aud .aud-layering small{font-weight:400;color:var(--am);font-size:12px;margin-left:6px}
+.aud .aud-layering .between small{display:block;margin:2px 0 0}
+.aud .aud-dist-row{display:grid;grid-template-columns:56px 1fr 72px;gap:8px;align-items:center;font-size:12px;margin-top:8px}
+.aud .aud-dist-row i{height:8px;background:#eef1f7;border-radius:4px;overflow:hidden}
+.aud .aud-dist-row b{display:block;height:100%;background:var(--ab);border-radius:4px}
+.aud .aud-dist-row b.alt{background:#7867a3}
+.aud .aud-dist-row em{font-style:normal;color:var(--am);text-align:right}
+.aud .aud-tech-title{font-size:13px;margin:14px 0 6px}

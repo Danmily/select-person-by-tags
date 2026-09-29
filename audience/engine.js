@@ -63,7 +63,7 @@ function log(t,action){t.history.push({at:new Date().toISOString(),version:t.ver
 function missing(t){return questions(t).map(q=>q.id);}
 function confirm(t){if(!['直接圈人','复用历史策略','分析转圈人'].includes(t.type))throw Error('该请求不在当前圈人执行范围');if(missing(t).length)throw Error('请补齐会改变人群结果的关键口径');if(t.scope==='ldmp'&&t.fields.domain.value!=='生服')throw Error('LDMP 演示仅限生服资产，请回门户创建其他域任务');t.confirmed=true;t.stage=2;log(t,'按当前理解生成方案；明确原话与业务决策已保留');}
 function select(t,ids){
- if(!t.confirmed)throw Error('请先确认需求');if(!ids.length)throw Error('请选择策略');if(ids.includes('balanced')&&ids.includes('conservative'))throw Error('标准口径与窄口径只能选择一种');
+ if(!t.confirmed)throw Error('请先确认需求');if(!ids.length)throw Error('请选择策略');if(ids.includes('balanced')&&ids.includes('conservative'))throw Error('宽口径与窄口径只能选择一种');
  t.strategy={ids,note:'',evidence:scenarios[t.scenario].source};t.strategyConfirmed=true;t.stage=3;
  const field=(name,value,group='必须满足',locked=false)=>({id:'DEMO-ASSET-'+t.scenario+'-'+t.conditions.length,name,domain:t.fields.domain.value,owner:'演示资产供应方',assetVersion:'demo.1',updated:new Date().toISOString().slice(0,10),definition:value,group,operator:group==='排除'?'排除':'符合',value,core:true,locked,permission:'演示可用'});
  t.conditions=[];
