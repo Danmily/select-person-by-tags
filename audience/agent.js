@@ -277,7 +277,7 @@ async function applyPermission(task, msg) {
   msg.status = 'applied'; save();
   if (options.portal?.applyTags) { options.portal.applyTags(msg.ids); return; }
   if (options.onMarket) { options.onMarket(); return; }
-  notify('已加入标签广场的待申请清单（演示）');
+  notify('已加入标签广场的选标篮（演示）');
 }
 async function useOtherTags(task, msg) {
   if (busy) return;
@@ -426,7 +426,7 @@ function permissionCard(task, m) {
     ${done ? `<p class="qa-done">${ICON.check}${m.status === 'fallback' ? '已改用其他标签' : '权限已开通，已继续执行'}</p>` : `<div class="qa-perm-actions">
       <button type="button" class="qa-primary" data-act="perm-apply" data-msg="${m.id}">一键申请权限</button>
       <button type="button" class="qa-outline" data-act="perm-other" data-msg="${m.id}">使用其他标签</button></div>
-      ${m.status === 'applied' ? `<p class="qa-muted qa-center">已加入标签广场的待申请清单。审批通过后回到这里继续。<button type="button" class="qa-link" data-act="perm-granted" data-msg="${m.id}">权限已开通，继续执行（演示）</button></p>` : `<p class="qa-center"><button type="button" class="qa-link" data-act="perm-granted" data-msg="${m.id}">权限已开通，继续执行（演示）</button></p>`}`}
+      ${m.status === 'applied' ? `<p class="qa-muted qa-center">已放进标签广场的选标篮。审批通过后回到这里继续。<button type="button" class="qa-link" data-act="perm-granted" data-msg="${m.id}">权限已开通，继续执行（演示）</button></p>` : `<p class="qa-center"><button type="button" class="qa-link" data-act="perm-granted" data-msg="${m.id}">权限已开通，继续执行（演示）</button></p>`}`}
   </details>`;
 }
 
