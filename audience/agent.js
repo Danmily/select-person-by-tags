@@ -217,7 +217,7 @@ async function start(query) {
   push(task, { type: 'user', text: q });
   const ack = push(task, { type: 'ack', open: true, steps: [
     { title: '理解需求', detail: `识别为「${task.title}」，保留业务原话`, status: 'wait' },
-    { title: '检索历史策略', detail: `找到 ${SCENES[task.scene].cases.length} 份相似策略，可引用 LR 回收结果`, status: 'wait' },
+    { title: '检索历史策略', detail: '检索可复用的历史圈人策略', status: 'wait' },
     { title: '匹配标签资产', detail: '从标签广场匹配可用于圈选的标签', status: 'wait' },
   ] });
   await runSteps(task, ack, 'steps');
@@ -258,7 +258,7 @@ async function execute(task) {
     analysis: [
       { title: '获取数据', detail: '按确认的条件读取标签表；通用级标签已自助开通', tables, tab: 'conditions', status: 'wait' },
       { title: '脚本分析', detail: '统计人群规模、消费分层、城市线级与年龄分布', tab: 'overview', status: 'wait' },
-      { title: '报告生成', detail: '生成人群画像报告，对比历史相似策略', tab: 'report', status: 'wait' },
+      { title: '报告生成', detail: '生成人群画像报告', tab: 'report', status: 'wait' },
     ] });
   await runSteps(task, msg, 'steps');
   task.result = { size: estimate(task), version: task.version, at: new Date().toLocaleString('zh-CN', { hour12: false }), taskCode: String(6958700000 + hash(task.id + task.version)).slice(0, 10), packId: 'PKG-' + (hash(task.id) + task.version * 7), scope: task.scope, conds: buildConditions(task), sql: buildSql(task, buildConditions(task)) };
@@ -488,8 +488,7 @@ function panelBody(task) {
       <h4>投放建议</h4><ul><li>先对 20% 人群做小流量实验，核心指标与对照组比较后再放量。</li><li>结果回收后在「效果回收」挂上 LR 文档，下一次相似需求会自动引用。</li></ul></section>`;
   }
   if (panel.tab === 'effect') {
-    return `<section class="qa-report"><h4>历史相似策略 · 引用收益</h4><p class="qa-muted">来自业务回填的 LR 文档，仅作类比，不代表本次效果。</p>
-      ${SCENES[task.scene].cases.map(([n, s, g, d]) => `<div class="qa-case"><div><b>${esc(n)}</b><span class="qa-pill">${s}</span></div><em>${esc(g)}</em><small>${esc(d)} · 示例数据</small></div>`).join('')}
+    return `<section class="qa-report">
       <h4>本次效果回收</h4>${task.effects.map((e) => `<div class="qa-case"><div><b>${esc(e.metric)}</b><span class="qa-pill">V${e.version}</span></div><em>${esc(e.result)}</em><small>${esc(e.doc)}</small></div>`).join('') || '<p class="qa-muted">还没有回收记录。投放两周后会提醒你补充。</p>'}
       <div class="qa-form"><input id="qa-eff-metric" placeholder="核心指标，如：券核销率"><input id="qa-eff-result" placeholder="结论，如：+2.3%（对照组 1.1%）"><input id="qa-eff-doc" placeholder="LR 文档链接"><button type="button" class="qa-primary" data-act="effect-save">记录回收结果</button></div></section>`;
   }
