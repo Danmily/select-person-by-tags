@@ -339,7 +339,6 @@ function sidebar() {
     <nav class="qa-side-nav">
       <button type="button" data-act="new" class="${view === 'home' ? 'on' : ''}">${ICON.plus}<span>新建对话</span></button>
       <button type="button" data-act="center" class="${view === 'center' ? 'on' : ''}">${ICON.task}<span>圈人任务中心</span></button>
-      <button type="button" data-act="market">${ICON.tag}<span>标签广场</span></button>
       <button type="button" data-act="kb" class="is-soon">${ICON.book}<span>策略知识库</span><em>规划中</em></button>
     </nav>
     <div class="qa-side-title">历史对话</div>
@@ -450,7 +449,11 @@ function resultPanel(task) {
   return `<aside class="qa-panel" aria-label="人群结果">
     <header class="qa-panel-head"><div><h2>${esc(task.title)} · 人群结果</h2><span>更新时间：${esc(r.at)}</span></div>
       <div><button type="button" class="qa-mini" data-act="full">${panel.full ? '退出全屏' : '全屏'}</button><button type="button" class="qa-icon-btn" data-act="close-panel" aria-label="关闭结果面板">×</button></div></header>
-    <div class="qa-panel-bar"><label class="qa-toggle-row"><span class="qa-switch ${task.periodic ? 'on' : ''}"><input type="checkbox" data-act="periodic" ${task.periodic ? 'checked' : ''}><i></i></span>定期更新${task.periodic ? '<em class="qa-muted">每天 08:00 按当前条件重算</em>' : ''}</label></div>
+    <div class="qa-panel-bar"><label class="qa-toggle-row"><span class="qa-switch ${task.periodic ? 'on' : ''}"><input type="checkbox" data-act="periodic" ${task.periodic ? 'checked' : ''}><i></i></span>定期更新${task.periodic ? '<em class="qa-on-badge">已开启</em>' : ''}</label>
+      <p class="qa-periodic-note">${task.periodic
+        ? `每天 08:00 按 V${r.version} 的圈选条件自动重算，下次更新：明天 08:00。人群包 ID <code>${r.packId}</code> 保持不变，已推送的投放平台会自动使用最新人群。`
+        : `开启后，每天 08:00 按本次确认的圈选条件（V${r.version}）自动重算人群，人群包 ID 不变，已推送的投放平台会自动使用最新人群。`}
+        条件被修改或标签权限失效时，会暂停更新并在对话中提醒你。</p></div>
     <nav class="qa-tabs">${TABS.map(([k, n]) => `<button type="button" class="${panel.tab === k ? 'on' : ''}" data-act="panel" data-tab="${k}">${n}</button>`).join('')}</nav>
     ${task.version !== r.version ? `<div class="qa-panel-note">${ICON.info}条件已调整为 V${task.version}，当前展示的是 V${r.version} 的结果；确认执行后更新。</div>` : ''}
     <div class="qa-panel-body">${panelBody(task)}</div>
